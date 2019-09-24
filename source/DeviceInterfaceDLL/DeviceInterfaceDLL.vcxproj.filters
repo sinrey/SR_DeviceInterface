@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="源文件\g722">
+      <UniqueIdentifier>{12ac9565-eaa3-427e-8a43-6c0bde2188a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\g722">
+      <UniqueIdentifier>{5137d0d4-25b9-4326-a950-22523dc0f802}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="DeviceInterfaceDll.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="TcpServer.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="list.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="device.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="cJSON.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="md5.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="fifo.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="command.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\G722\funcg722.c">
+      <Filter>源文件\g722</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\G722\g722.c">
+      <Filter>源文件\g722</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\G722\operg722.c">
+      <Filter>源文件\g722</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\G722\ugst-utl.c">
+      <Filter>源文件\g722</Filter>
+    </ClCompile>
+    <ClCompile Include="rtp.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="log.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="DeviceInterfaceDll.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="list.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="device.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="cJSON.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="fifo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="command.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\G722\funcg722.h">
+      <Filter>头文件\g722</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\G722\g722.h">
+      <Filter>头文件\g722</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\G722\operg722.h">
+      <Filter>头文件\g722</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\G722\ugst-utl.h">
+      <Filter>头文件\g722</Filter>
+    </ClInclude>
+    <ClInclude Include="rtp.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="TcpServer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="log.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DeviceInterfaceDll.def">
+      <Filter>源文件</Filter>
+    </None>
+  </ItemGroup>
+</Project>

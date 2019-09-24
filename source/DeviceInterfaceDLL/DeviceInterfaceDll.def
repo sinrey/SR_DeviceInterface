@@ -1,0 +1,25 @@
+LIBRARY
+
+EXPORTS
+
+	SR_Init
+	SR_Cleanup
+	SR_GetLastError
+	SR_GetVersion
+	SR_Login
+	SR_Logout
+	SR_GetCapacity
+	SR_DeleteFile
+	SR_PutFile
+	SR_PutFile_Status
+	SR_PutFile_Stop
+	SR_UploadFile_V40
+	SR_Upload_Process
+	SR_UploadClose
+	SR_StartVoiceCom_V30
+	SR_VoiceCom_Data
+	SR_StopVoiceCom
+	SR_SetExceptionCallBack_V30
+	SR_StartEmergency
+	SR_Emergency_Data
+	SR_StopEmergency
