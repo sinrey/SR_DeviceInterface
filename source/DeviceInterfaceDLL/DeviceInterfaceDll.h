@@ -54,21 +54,31 @@ __declspec(dllexport) BOOL _stdcall SR_Init(UINT32 ListenPort);
 __declspec(dllexport) BOOL _stdcall SR_Cleanup();
 __declspec(dllexport) UINT32 _stdcall SR_GetLastError();
 __declspec(dllexport) UINT32 _stdcall SR_GetVersion();
+
 __declspec(dllexport) UINT32 _stdcall SR_Login(LPSR_USER_LOGIN_INFO pLoginInfo, LPSR_DEVICEINFO lpDeviceInfo);
 __declspec(dllexport) UINT32 _stdcall SR_Logout(UINT32 lUserID);
-__declspec(dllexport) UINT32 _stdcall SR_GetCapacity(UINT32 lUserID, PCHAR lpJsonBuffer, UINT32 nJsonBufferSize, UINT32 *nRecvBytes, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_DeleteFile(UINT32 lUserID, CONST PCHAR sFileName, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_PutFile(UINT32 lUserID, CONST CHAR* sFileName, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_PutFile_Status(UINT32 lUserID, UINT32* Process, LPVOID lpInputParam, LPVOID lpOutputParam);;
-__declspec(dllexport) UINT32 _stdcall SR_PutFile_Stop(UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_UploadFile_V40(UINT32* lUploadHandle, UINT32 lUserIDconst, CONST CHAR* sFileName, UINT32 dwUploadType, BOOL bCover, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_Upload_Process(UINT32 lUploadHandle, PCHAR lpInBuffer, UINT32 BufferSize, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_UploadClose(UINT32 lUploadHandle, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_StartVoiceCom_V30(UINT32* IVoiceComHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_VoiceCom_Data(UINT32 IVoiceComHandle, PCHAR pSendDataBuffer, UINT32 nSendBufferSize, PCHAR pRecvDataBuffer, UINT32 nRecvBufferSize, UINT32* nRecvBytes, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_StopVoiceCom(UINT32 iVoiceComHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_SetExceptionCallBack_V30(fExceptionCallBack pCallBack);
 
-__declspec(dllexport) UINT32 _stdcall SR_StartEmergency(UINT32* iEmergencyHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_Emergency_Data(UINT32 iEmergencyHandle, PCHAR pSendDataBuffer, UINT32 nSendBufferSize, PCHAR pRecvDataBuffer, UINT32 nRecvBufferSize, UINT32* nRecvBytes, LPVOID lpInputParam, LPVOID lpOutputParam);
-__declspec(dllexport) UINT32 _stdcall SR_StopEmergency(UINT32 iEmergencyHandle, UINT32 lUserID,LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_GetCapacity(UINT32 lUserID, CHAR* lpJsonBuffer, UINT32 nJsonBufferSize, UINT32 *nRecvBytes, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_DeleteFile(UINT32 lUserID, CONST CHAR* sFileName, LPVOID lpInputParam, LPVOID lpOutputParam);
+
+__declspec(dllexport) UINT32 _stdcall SR_PutFile(UINT32 lUserID, CONST CHAR* sFileName, UINT32 nVolume, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_PutFileStatus(UINT32 lUserID, UINT32* Process, LPVOID lpInputParam, LPVOID lpOutputParam);;
+__declspec(dllexport) UINT32 _stdcall SR_PutFileClose(UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam);
+
+__declspec(dllexport) UINT32 _stdcall SR_UploadFile(UINT32* lUploadHandle, UINT32 lUserIDconst, CONST CHAR* sFileName, BOOL bCover, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_UploadFileData(UINT32 lUploadHandle, CHAR* lpInBuffer, UINT32 BufferSize, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_UploadFileClose(UINT32 lUploadHandle, LPVOID lpInputParam, LPVOID lpOutputParam);
+
+__declspec(dllexport) UINT32 _stdcall SR_PlayFile(UINT32* lUploadHandle, UINT32 lUserIDconst, CONST CHAR* sFileName, UINT32 nVolume, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_PlayFileData(UINT32 lUploadHandle, CHAR* lpInBuffer, UINT32 BufferSize, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_PlayFileClose(UINT32 lUploadHandle, LPVOID lpInputParam, LPVOID lpOutputParam);
+
+__declspec(dllexport) UINT32 _stdcall SR_VoiceCom(UINT32* IVoiceComHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_VoiceComData(UINT32 IVoiceComHandle, CHAR* pSendDataBuffer, UINT32 nSendBufferSize, PCHAR pRecvDataBuffer, UINT32 nRecvBufferSize, UINT32* nRecvBytes, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_VoiceComClose(UINT32 iVoiceComHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam);
+
+__declspec(dllexport) UINT32 _stdcall SR_Emergency(UINT32* iEmergencyHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_EmergencyData(UINT32 iEmergencyHandle, CHAR* pSendDataBuffer, UINT32 nSendBufferSize, CHAR* pRecvDataBuffer, UINT32 nRecvBufferSize, UINT32* nRecvBytes, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_EmergencyClose(UINT32 iEmergencyHandle, UINT32 lUserID,LPVOID lpInputParam, LPVOID lpOutputParam);
+
+__declspec(dllexport) UINT32 _stdcall SR_SetExceptionCallBack(fExceptionCallBack pCallBack);

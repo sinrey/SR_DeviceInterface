@@ -10,7 +10,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Windows.Forms;
-//using GroovyCodecs.G711;
 using Gimela.Net.Rtp;
 using G711;
 using Sinrey.Device;
@@ -22,7 +21,7 @@ namespace test
         private delegate void DelegateShowWave(short[] pcm);
 
         public DeviceListener deviceListener;
-        public UInt32 DeviceID;
+        public string DeviceID;
 
 
         Thread dataThread = null;
@@ -81,15 +80,10 @@ namespace test
             long timestamp = 0;
             short[] inputbuffer = new short[2048];
 
-            //AudioPowerUpdate hander = new AudioPowerUpdate(AudioPowerUpdateHandler);
-            //ThreadParam ap = (ThreadParam)obj;
-            //DeviceListener.Device d = deviceListener.Find(ap.id);
-            //if (_Device == null) return;
             DeviceListener.Device d = deviceListener.Find(DeviceID);
 
             UdpClient udpserver = new UdpClient(9999);
             int port = 9999;
-            //bool normal_mode = ap.mode.Equals("normal");
             DelegateShowWave h = new DelegateShowWave(ShowWave);
 
             int ret;
@@ -111,10 +105,7 @@ namespace test
 
             dev_ip = ipep.Address.ToString();
             dev_port = ipep.Port;
-            //GroovyCodecs.G711.uLaw.ULawEncoder g711encode = new GroovyCodecs.G711.uLaw.ULawEncoder();
-            //GroovyCodecs.G711.uLaw.ULawDecoder g711decode = new GroovyCodecs.G711.uLaw.ULawDecoder();
 
-            //SoundCard.SoundCardInit(8000);
             try
             {
                 short[] micpack = new short[2048];
@@ -127,31 +118,6 @@ namespace test
                 {
                     micpack_length = 0;
                     speakerpack_length = 0;
-                    /*
-                    if (SoundCard.SoundCardWaitForInputData())
-                    {
-
-                        while (true)
-                        {
-                            short[] pcmbuf = SoundCard.SoundCardReadFrom(160);
-                            if (pcmbuf == null) break;
-
-                            if ((micpack_length + pcmbuf.Length) < 2048)
-                            {
-                                Array.Copy(pcmbuf, 0, micpack, micpack_length, pcmbuf.Length);
-                                micpack_length += pcmbuf.Length;
-                            }
-
-
-                            byte[] ba = g711encode.Process(pcmbuf);
-                            RtpPacket packet = new RtpPacket(RtpPayloadType.G711_uLaw, sequenceNumber, timestamp, ba, ba.Length);
-                            sequenceNumber++;
-                            timestamp += ba.Length;
-
-                            udpserver.Send(packet.ToArray(), packet.Length, dev_ip, dev_port);
-                        }
-                    }
-                    */
 
                     while (udpserver.Available > 0)
                     {
@@ -162,52 +128,11 @@ namespace test
                             RtpPacket packet = new RtpPacket(bs, bs.Length);
                             if (packet.PayloadType == RtpPayloadType.G711_uLaw)
                             {
-                                //short[] pcmbuf1 = g711decode.Process(packet.Payload);
                                 short[] pcmbuf1 = g711.g711Decode_ulaw(packet.Payload);
                                 this.BeginInvoke(h, pcmbuf1);
-                                //SoundCard.SoundCardWriteTo(pcmbuf1);
-
-                                //if ((speakerpack_length + pcmbuf1.Length) < 2048)
-                                //{
-                                //    Array.Copy(pcmbuf1, 0, speakerpack, speakerpack_length, pcmbuf1.Length);
-                                //    speakerpack_length += pcmbuf1.Length;
-                                //}
                             }
                         }
                     }
-                    /*
-                    double mic_db = 0;
-                    double speaker_db = 0;
-                    if (micpack_length > 0)
-                    {
-                        double a = 0;
-                        for (int i = 0; i < micpack_length; i++)
-                        {
-                            a += micpack[i] * micpack[i];
-                        }
-                        mic_db = 20 * Math.Log10(a / (dbBase * micpack_length));
-                        mic_db += 100;
-                        if (mic_db < 0) mic_db = 0;
-                        if (mic_db > 100) mic_db = 100;
-
-                        this.Invoke(hander, Convert.ToInt32(mic_db), 0);
-                    }
-
-                    if (speakerpack_length > 0)
-                    {
-                        double a = 0;
-                        for (int i = 0; i < speakerpack_length; i++)
-                        {
-                            a += speakerpack[i] * speakerpack[i];
-                        }
-                        speaker_db = 20 * Math.Log10(a / (dbBase * speakerpack_length));
-                        speaker_db += 100;
-                        if (speaker_db < 0) speaker_db = 0;
-                        if (speaker_db > 100) speaker_db = 100;
-
-                        this.Invoke(hander, 0, Convert.ToInt32(speaker_db));
-                    }
-                    */
                 }
             }
             catch (ThreadAbortException abortException)

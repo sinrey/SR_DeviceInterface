@@ -21,18 +21,19 @@ namespace AudioDemo
     {
         private class DeviceItem
         {
-            public uint id;
+            public string id;
             public string ip;
             public int port;
             public override string ToString()
             {
-                return id.ToString("X8") + "@" + ip + ":" + port.ToString();
+                //return id.ToString("X8") + "@" + ip + ":" + port.ToString();
+                return id + "@" + ip + ":" + port.ToString();
             }
         }
 
         private class ThreadParam
         {
-            public uint id;
+            public string id;
             public string mode;
             public int volume;
             public string inputsource;

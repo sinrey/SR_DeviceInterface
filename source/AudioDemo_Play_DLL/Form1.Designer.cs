@@ -256,8 +256,7 @@
             this.comboBox2.Enabled = false;
             this.comboBox2.FormattingEnabled = true;
             this.comboBox2.Items.AddRange(new object[] {
-            "normal",
-            "emergency"});
+            "normal"});
             this.comboBox2.Location = new System.Drawing.Point(77, 65);
             this.comboBox2.Name = "comboBox2";
             this.comboBox2.Size = new System.Drawing.Size(295, 20);
@@ -489,6 +488,7 @@
             this.label8.Size = new System.Drawing.Size(35, 12);
             this.label8.TabIndex = 40;
             this.label8.Text = "param";
+            this.label8.Visible = false;
             // 
             // textBox6
             // 

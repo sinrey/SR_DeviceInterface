@@ -34,14 +34,18 @@ namespace AudioDemo_Play_DLL
 
             string exename = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
             string path = System.IO.Path.GetFullPath(exename);
-            string txtfile = path + "readme.txt";
+            string txtfile = path + "..//readme.txt";
             //FileStream fs = File.OpenRead(txtfile);
             //fs.readline
-            StreamReader sr = new StreamReader(txtfile);
-            string lines = sr.ReadToEnd();
-            textBox3.Text = lines;
+            if (System.IO.File.Exists(txtfile))
+            {
+                StreamReader sr = new StreamReader(txtfile);
+                string lines = sr.ReadToEnd();
+                textBox3.Text = lines;
+                tabControl1.SelectedTab = tabPage3 ;
+            }
+
             comboBox1.SelectedIndex = 0;
-            tabControl1.SelectedTab = tabPage3 ;
 
             uint ver = DeviceInterfaceDll.SR_GetVersion();
             uint verh = (ver & 0xff000000) >> 24;
@@ -82,12 +86,14 @@ namespace AudioDemo_Play_DLL
                 if (id == userid)
                 {
                     item.ImageIndex = 2;
-                    PlaySuccessNotify();
+                    PlayNotify();
+                    comboBox3.Text = id.ToString();
+                    comboBox5.Text = id.ToString();
                     break;
                 }
             }
         }
-        private void PlaySuccessNotify()
+        private void PlayNotify()
         {
             string exename = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
             string path = System.IO.Path.GetFullPath(exename);
@@ -178,7 +184,8 @@ namespace AudioDemo_Play_DLL
             uint ret;
             ThreadParam ap = (ThreadParam)arg;
             WorkProcessHandler h = new WorkProcessHandler(FilePlayProcess);
-            ret = DeviceInterfaceDll.SR_UploadFile_V40(out uint sHandle, ap.userid, ap.filename, DeviceInterfaceDll.UPLOAD_AUDIO_FILE_RELEASE, false);
+            //ret = DeviceInterfaceDll.SR_UploadFile(out uint sHandle, ap.userid, ap.filename, DeviceInterfaceDll.UPLOAD_AUDIO_FILE_RELEASE, false);
+            ret = DeviceInterfaceDll.SR_PlayFile(out uint sHandle, ap.userid, ap.filename, 97);
             if (ret == DeviceInterfaceDll.RC_OK)
             {
                 try
@@ -192,7 +199,7 @@ namespace AudioDemo_Play_DLL
                         int datlen = fs.Read(dat, 0, dat.Length);
                         if (datlen > 0)
                         {
-                            DeviceInterfaceDll.SR_Upload_Process(sHandle, dat, datlen);
+                            DeviceInterfaceDll.SR_PlayFileData(sHandle, dat, datlen);
                             offset += datlen;
                         }
                         else
@@ -204,7 +211,7 @@ namespace AudioDemo_Play_DLL
                 }
                 finally
                 {
-                    DeviceInterfaceDll.SR_UploadClose(sHandle);
+                    DeviceInterfaceDll.SR_PlayFileClose(sHandle);
                     this.Invoke(h, sHandle, "", true, 0);
                     PlayThread = null;
                 }
@@ -293,7 +300,7 @@ namespace AudioDemo_Play_DLL
             WorkProcessHandler h = new WorkProcessHandler(EmergencyFilePlayProcess);
             try
             {
-                ret = DeviceInterfaceDll.SR_StartEmergency(out sHandle, ap.userid);
+                ret = DeviceInterfaceDll.SR_Emergency(out sHandle, ap.userid);
                 if (ret == DeviceInterfaceDll.RC_OK)
                 {
                     int offset = 0;
@@ -308,7 +315,7 @@ namespace AudioDemo_Play_DLL
                         {
                             IntPtr p = Marshal.UnsafeAddrOfPinnedArrayElement(dat, 0);
                             Marshal.Copy(p, pcm, 0, pcm.Length);
-                            DeviceInterfaceDll.SR_Emergency_Data(sHandle, pcm);
+                            DeviceInterfaceDll.SR_EmergencyData(sHandle, pcm);
                             offset += 640;
                         }
                         else
@@ -322,7 +329,7 @@ namespace AudioDemo_Play_DLL
             }
             finally
             {
-                DeviceInterfaceDll.SR_StopEmergency(sHandle, ap.userid);
+                DeviceInterfaceDll.SR_EmergencyClose(sHandle, ap.userid);
                 this.Invoke(h, sHandle, "", true, 0);
                 PlayThread = null;
             }

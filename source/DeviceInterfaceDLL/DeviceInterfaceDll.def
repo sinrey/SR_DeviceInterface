@@ -11,15 +11,18 @@ EXPORTS
 	SR_GetCapacity
 	SR_DeleteFile
 	SR_PutFile
-	SR_PutFile_Status
-	SR_PutFile_Stop
-	SR_UploadFile_V40
-	SR_Upload_Process
-	SR_UploadClose
-	SR_StartVoiceCom_V30
-	SR_VoiceCom_Data
-	SR_StopVoiceCom
-	SR_SetExceptionCallBack_V30
-	SR_StartEmergency
-	SR_Emergency_Data
-	SR_StopEmergency
+	SR_PutFileStatus
+	SR_PutFileClose
+	SR_UploadFile
+	SR_UploadFileData
+	SR_UploadFileClose
+	SR_PlayFile
+	SR_PlayFileData
+	SR_PlayFileClose
+	SR_VoiceCom
+	SR_VoiceComData
+	SR_VoiceComClose
+	SR_SetExceptionCallBack
+	SR_Emergency
+	SR_EmergencyData
+	SR_EmergencyClose

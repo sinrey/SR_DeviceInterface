@@ -10,7 +10,7 @@ INT CommandSDCardGetInfo(PCHAR Out, INT OutSize)
 	cJSON_AddStringToObject(jsonroot, "command", CMD_GET_DISK_INFO);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize,jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -24,7 +24,7 @@ INT CommandSDCardGetFirstFile(PCHAR Out, INT OutSize)
 	cJSON_AddStringToObject(jsonroot, "command", CMD_GET_FIRST_FILE);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -38,7 +38,7 @@ INT CommandSDCardGetNextFile(PCHAR Out, INT OutSize)
 	cJSON_AddStringToObject(jsonroot, "command", CMD_GET_NEXT_FILE);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -56,7 +56,7 @@ INT CommandSDCardUploadFile(PCHAR Out, INT OutSize, INT DatPort, PCHAR sFileName
 	cJSON_AddStringToObject(jsonroot, "param", sFileName);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -72,7 +72,7 @@ INT CommandSDCardDeleteFile(PCHAR Out, INT OutSize, PCHAR sFileName)
 	cJSON_AddStringToObject(jsonroot, "param", sFileName);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -92,7 +92,7 @@ INT CommandPlayFileStart(PCHAR Out, INT OutSize, INT DatPort, PCHAR sFileName, I
 	cJSON_AddStringToObject(jsonroot, "param", sFileName);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -106,7 +106,7 @@ INT CommandAudioStop(PCHAR Out, INT OutSize)
 	cJSON_AddStringToObject(jsonroot, "command", CMD_STOP);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -133,7 +133,7 @@ INT CommandPlayFileEmergencyStart(PCHAR Out, INT OutSize, PCHAR sTargetAddr, INT
 
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -147,7 +147,7 @@ INT CommandPlayFileEmergencyStop(PCHAR Out, INT OutSize)
 	cJSON_AddStringToObject(jsonroot, "command", CMD_EMERGENCY_STOP);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -164,7 +164,7 @@ INT CommandSDCardPlayFileStart(PCHAR Out, INT OutSize, PCHAR sFileName, INT nVol
 	cJSON_AddStringToObject(jsonroot, "param", sFileName);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -183,7 +183,7 @@ INT CommandSDCardPlayFileGetStatus(PCHAR Out, INT OutSize)
 	cJSON_AddStringToObject(jsonroot, "command", CMD_SDCARD_PLAYFILE_STATUS);
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -208,7 +208,7 @@ INT CommandIntercomStart(PCHAR Out, INT OutSize, PCHAR sTargetAddr, INT nTargetP
 	
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;
@@ -232,7 +232,7 @@ INT CommandRegisterAck(PCHAR Out, INT OutSize, PCHAR session, PCHAR auth, INT er
 
 	jsonout = cJSON_Print(jsonroot);
 	cJSON_Delete(jsonroot);
-	INT jsonlength = strlen(jsonout);
+	INT jsonlength = (INT)strlen(jsonout);
 	strncpy_s(Out, OutSize, jsonout, jsonlength);
 	free(jsonout);
 	return jsonlength;

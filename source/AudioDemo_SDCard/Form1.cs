@@ -19,18 +19,19 @@ namespace AudioDemo_SDCard
     {
         private class DeviceItem
         {
-            public uint id;
+            public string id;
             public string ip;
             public int port;
             public override string ToString()
             {
-                return id.ToString("X8") + "@" + ip + ":" + port.ToString();
+                //return id.ToString("X8") + "@" + ip + ":" + port.ToString();
+                return id + "@" + ip + ":" + port.ToString();
             }
         }
 
         private class ThreadParam
         {
-            public uint id;
+            public string id;
             public string mode;
             public int volume;
             public string inputsource;
@@ -210,10 +211,6 @@ namespace AudioDemo_SDCard
                     dataThread = new Thread(SDFileUploadThread);
                     dataThread.IsBackground = true;
                     dataThread.Start(ap);
-                    //Application.DoEvents();
-                    //deviceListener.EventWorkProcess += uploadFileProcess;
-                    //deviceListener.SDCardUploadFileThread(d, filepathname);
-                    //deviceListener.SDCardUploadFile(d, filepathname);
                 }
             }
         }

@@ -29,7 +29,7 @@ namespace Sinrey.Device
         private class CommandRegister
         {
             public string command;
-            public uint id;
+            public string id;
             public string authentication;
             public string session;
             public string auth_dir;
@@ -39,7 +39,7 @@ namespace Sinrey.Device
         {
             public string command;
             public string mode;
-            public uint id;
+            public string id;
         }
 
         private class CommandStart
@@ -147,7 +147,7 @@ namespace Sinrey.Device
         {
             public string username;
             public string password;
-            public uint id;
+            public string id;
             public int loginState;
             public string peerip;
             public int peerport;
@@ -433,7 +433,7 @@ namespace Sinrey.Device
             }
         }
 
-        public Device Find(uint device_id)
+        public Device Find(string device_id)
         {
             foreach(Device d in DeviceList)
             {

@@ -157,7 +157,7 @@ void DeviceRemoveAll()
 }
 
 
-VOID DeviceSetProbe(LPSR_DEVICE_ITEM d, HANDLE hEvent, PCHAR sCmd, PCHAR psBuffer, UINT32 nBufferSize)
+VOID DeviceSetProbe(LPSR_DEVICE_ITEM d, HANDLE hEvent, CHAR* sCmd, CHAR* psBuffer, UINT32 nBufferSize)
 {
 	if (d->hEvent != NULL)return;
 	DeviceLock(d);
@@ -189,12 +189,12 @@ void DeviceUnLock(LPSR_DEVICE_ITEM d)
 }
 
 //从接收缓冲提取命令并进行处理,输出到out缓冲，长度为int
-int GetCommand(LPSR_DEVICE_ITEM d, char* out, int outsize)
+int GetCommand(LPSR_DEVICE_ITEM d, CHAR* out, UINT32 outsize)
 {
 	BOOL header = FALSE;
 	BOOL end = FALSE;
 	int level = 0;
-	int count = 0;
+	UINT32 count = 0;
 	struct _Fifo* pFifo = &d->Fifo;
 	while (FifoGetDataLength(pFifo) > 0)
 	{
@@ -208,7 +208,6 @@ int GetCommand(LPSR_DEVICE_ITEM d, char* out, int outsize)
 		{
 			header = TRUE;
 			level++;
-
 		}
 		else if (c == '}')
 		{
@@ -254,7 +253,7 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 				cJSON* command = cJSON_GetObjectItem(json, "command");
 				if (command != NULL)
 				{
-					if (d->sCommand[0])
+					if (d->sCommand[0])//有监听事件的请求，当收到指定的消息后，将对应的事件同步量设置为有效。
 					{
 						if (strcmp(command->valuestring, d->sCommand) == 0)
 						{
@@ -280,7 +279,8 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 							cJSON* auth_dir = cJSON_GetObjectItem(json, "auth_dir");
 							cJSON* id = cJSON_GetObjectItem(json, "id");
 
-							if (id != NULL)d->uID = id->valueint;
+							//if (id != NULL)d->uID = id->valueint;
+							if (id != NULL)strcpy_s(d->uID, sizeof(d->uID), id->valuestring);
 
 							//char* jsontext;
 							int len = 0;
@@ -309,24 +309,24 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 										//jsontext = CommandRegisterAck(session, auth, RESULT_OK);
 										len = CommandRegisterAck(out, sizeof(out), session, auth, RESULT_OK);
 									}
-									else
+									else//仅服务器鉴权
 									{									
 										len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_OK);
 									}
 									d->nLoginStats = 1;
 								}
-								else
+								else//鉴权失败，非法设备登录
 								{
 									len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_REGISTER_FAULT);
 								}
 							}
-							else
+							else//设备登录数据不包含必须字段。
 							{
 								len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_REGISTER_FAULT);
 							}
 							TcpServerSend(d->Sock, out, len);
 						}
-						else if (d->nLoginStats == 1)
+						else if (d->nLoginStats == 1)//服务器已经通过设备登录鉴权，等到设备回应200
 						{
 							cJSON* result = cJSON_GetObjectItem(json, "result");
 							if (result->valueint == RESULT_OK)
@@ -360,7 +360,7 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 
 #define COMMAND_BUFFER_SIZE 1024
 
-INT SendCommand(LPSR_DEVICE_ITEM d, char* cmd, char* sendbuf, int slen, char* recvbuf, int recvbufsize, int* nrecvbyte)
+INT SendCommand(LPSR_DEVICE_ITEM d, CHAR* cmd, CHAR* sendbuf, UINT32 slen, CHAR* recvbuf, UINT32 recvbufsize, UINT32* nrecvbyte)
 {
 	HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if (hEvent == NULL)return -1;
@@ -429,7 +429,7 @@ int DeviceGetDiskInfo(LPSR_DEVICE_ITEM d, UINT32* totalCapacity, UINT32* remainC
 	return RC_TIMEOUT;
 }
 
-INT DeviceGetFirstFile(LPSR_DEVICE_ITEM d, PCHAR sFileName, UINT32 nFileNameSize, UINT32* nFileSize)
+INT DeviceGetFirstFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
@@ -467,7 +467,7 @@ INT DeviceGetFirstFile(LPSR_DEVICE_ITEM d, PCHAR sFileName, UINT32 nFileNameSize
 	return RC_TIMEOUT;
 }
 
-INT DeviceGetNextFile(LPSR_DEVICE_ITEM d, PCHAR sFileName, UINT32 nFileNameSize, UINT32* nFileSize)
+INT DeviceGetNextFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
@@ -506,7 +506,7 @@ INT DeviceGetNextFile(LPSR_DEVICE_ITEM d, PCHAR sFileName, UINT32 nFileNameSize,
 }
 
 //CommandSDCardDeleteFile
-INT DeviceDeleteFile(LPSR_DEVICE_ITEM d, PCHAR sFileName)
+INT DeviceDeleteFile(LPSR_DEVICE_ITEM d, CHAR* sFileName)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
@@ -549,7 +549,7 @@ INT DeviceDeleteFile(LPSR_DEVICE_ITEM d, PCHAR sFileName)
 	return RC_TIMEOUT;
 }
 
-INT DeviceUploadFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, PCHAR sFileName, BOOL bConver)
+INT DeviceUploadFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName, BOOL bConver)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
@@ -594,7 +594,7 @@ INT DeviceUploadFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, PCHAR sFileName,
 
 //当前函数仅支持mp3文件的播放
 //sFileName仅作为播放信息使用，函数并不操作该文件。
-INT DevicePlayFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, PCHAR sFileName, INT nVolume)
+INT DevicePlayFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName, INT nVolume)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
@@ -661,7 +661,8 @@ INT DevicePlayFileStop(LPSR_DEVICE_ITEM d)
 
 				if (result != NULL)
 				{
-					if ((result->valueint == 100) || (result->valueint == 200))
+					//if ((result->valueint == 100) || (result->valueint == 200))
+					if(result->valueint == 221)
 					{
 						ret = RC_OK;
 					}
@@ -682,7 +683,7 @@ INT DevicePlayFileStop(LPSR_DEVICE_ITEM d)
 	//
 }
 
-INT DeviceEmergencyPlayFileStart(LPSR_DEVICE_ITEM d, PCHAR sTargetAddr, UINT32 nTargetPort, PCHAR sStreamType, PCHAR sProtocol, INT nVolume, PCHAR sFileName)
+INT DeviceEmergencyPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sFileName)
 {
 	PCHAR sIp = NULL;
 	if (sTargetAddr == NULL)sIp = "0.0.0.0";
@@ -772,7 +773,7 @@ INT DeviceEmergencyPlayFileStop(LPSR_DEVICE_ITEM d)
 	//
 }
 
-INT DeviceSDCardPlayFileStart(LPSR_DEVICE_ITEM d, PCHAR sFileName, INT nVolume)
+INT DeviceSDCardPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sFileName, INT nVolume)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
@@ -870,7 +871,7 @@ INT DeviceSDCardPlayFileGetStatus(LPSR_DEVICE_ITEM d, INT* runtime, INT* process
 	//
 }
 
-INT DeviceIntercomStart(LPSR_DEVICE_ITEM d, PCHAR sTargetAddr,UINT32 nTargetPort, PCHAR sStreamType, PCHAR sProtocol, INT nInputGain, PCHAR sInputSource, INT nVolume, PCHAR sAecMode, PCHAR sSession)
+INT DeviceIntercomStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr,UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nInputGain, CHAR* sInputSource, INT nVolume, CHAR* sAecMode, CHAR* sSession)
 {
 	PCHAR sIp = NULL;
 	if(sTargetAddr == NULL)sIp = "0.0.0.0";

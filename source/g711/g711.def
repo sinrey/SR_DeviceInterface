@@ -1,0 +1,10 @@
+LIBRARY
+
+EXPORTS
+
+	linear2alaw
+	alaw2linear
+	linear2ulaw
+	ulaw2linear
+	alaw2ulaw
+	ulaw2alaw

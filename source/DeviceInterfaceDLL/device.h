@@ -40,7 +40,8 @@ typedef struct DeviceItem
 {
 	CRITICAL_SECTION cs;//临界区，用于线程间对结构内变量的访问原子化。
 	UINT32 nUserID;//系统唯一序号
-	ULONG uID;//设备唯一序号
+	//ULONG uID;//设备唯一序号
+	CHAR  uID[64];
 	UINT32 nLoginStats;//登录状态 0=未登录，1=连接，2=认证通过
 	SOCKET Sock;//与设备连接的tcp socket
 	UINT32 nPeerIp;//设备ip地址
@@ -48,7 +49,7 @@ typedef struct DeviceItem
 	
 	HANDLE hEvent;//事件	//应用使用CreateEvent创建一个事件句柄，并传入，当收到Command命令回应时，将Event设置为有效。
 	CHAR sCommand[128];//监听事件
-	PCHAR psCommandBuffer;//事件的数据指针,保存收到的数据缓存。
+	CHAR* psCommandBuffer;//事件的数据指针,保存收到的数据缓存。
 	UINT32 nCommandBufferSize;//事件数据缓存的大小
 	UINT32 nRecvBytes;//接收到是数据长度
 
@@ -63,27 +64,27 @@ LPSR_DEVICE_ITEM DeviceFind(UINT32 lUserID);
 VOID DeviceLock(LPSR_DEVICE_ITEM d);
 VOID DeviceUnLock(LPSR_DEVICE_ITEM d);
 VOID CommandProcess(LPSR_DEVICE_ITEM d);
-VOID DeviceSetProbe(LPSR_DEVICE_ITEM d, HANDLE hEvent, PCHAR sCmd, PCHAR psBuffer, UINT32 nBufferSize);
+VOID DeviceSetProbe(LPSR_DEVICE_ITEM d, HANDLE hEvent, CHAR* sCmd, CHAR* psBuffer, UINT32 nBufferSize);
 VOID DeviceReleaseProbe(LPSR_DEVICE_ITEM d);
 
 void DeviceRemoveAll();
 INT DeviceRemove(UINT32 nUserID);
 
 INT DeviceGetDiskInfo(LPSR_DEVICE_ITEM d, UINT32* totalCapacity, UINT32* remainCapacity);
-INT DeviceGetFirstFile(LPSR_DEVICE_ITEM d, PCHAR sFileName, UINT32 nFileNameSize, UINT32* nFileSize);
-INT DeviceGetNextFile(LPSR_DEVICE_ITEM d, PCHAR sFileName, UINT32 nFileNameSize, UINT32* nFileSize);
-INT DevicePlayFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, PCHAR sFileName, INT nVolume);
+INT DeviceGetFirstFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize);
+INT DeviceGetNextFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize);
+INT DevicePlayFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName, INT nVolume);
 
-INT DeviceDeleteFile(LPSR_DEVICE_ITEM d, PCHAR sFileName);
-INT DeviceSDCardPlayFileStart(LPSR_DEVICE_ITEM d, PCHAR sFileName, INT nVolume);
+INT DeviceDeleteFile(LPSR_DEVICE_ITEM d, CHAR* sFileName);
+INT DeviceSDCardPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sFileName, INT nVolume);
 INT DeviceSDCardPlayFileGetStatus(LPSR_DEVICE_ITEM d, INT* runtime, INT* process);
 INT DeviceSDCardPlayFileStop(LPSR_DEVICE_ITEM d);
 
 INT DeviceUploadFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, PCHAR sFileName, BOOL bConver);
 
-INT DeviceIntercomStart(LPSR_DEVICE_ITEM d, PCHAR sTargetAddr, UINT32 nTargetPort, PCHAR sStreamType, PCHAR sProtocol, INT nInputGain, PCHAR sInputSource, INT nVolume, PCHAR sAecMode, PCHAR sSession);
+INT DeviceIntercomStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nInputGain, CHAR* sInputSource, INT nVolume, CHAR* sAecMode, CHAR* sSession);
 INT DeviceIntercomStop(LPSR_DEVICE_ITEM d);
 
-INT DeviceEmergencyPlayFileStart(LPSR_DEVICE_ITEM d, PCHAR sTargetAddr, UINT32 nTargetPort, PCHAR sStreamType, PCHAR sProtocol, INT nVolume, PCHAR sFileName);
+INT DeviceEmergencyPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sFileName);
 INT DeviceEmergencyPlayFileStop(LPSR_DEVICE_ITEM d);
 

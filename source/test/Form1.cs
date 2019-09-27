@@ -11,7 +11,6 @@ using System.Net.Sockets;
 using System.Windows.Forms;
 using System.Media;
 using Sinrey.Device;
-using NASetupDLL;
 using System.Threading;
 
 namespace test
@@ -20,18 +19,19 @@ namespace test
     {
         private class DeviceItem
         {
-            public uint id;
+            public string id;
             public string ip;
             public int port;
             public override string ToString()
             {
-                return id.ToString("X8") + "@" + ip + ":" + port.ToString();
+                //return id.ToString("X8") + "@" + ip + ":" + port.ToString();
+                return id + "@" + ip + ":" + port.ToString();
             }
         }
 
         private class ThreadParam
         {
-            public uint id;
+            public string id;
             public string mode;
             public int volume;
             public string inputsource;
@@ -40,10 +40,8 @@ namespace test
             public string filename;
             public string streamtype;
         }
-        //delegate void WorkProcessHandler(int process);
         private delegate void WorkProcessHandler(DeviceListener.Device d, string info, bool completed, int param);
-        uint DeviceID = 0;
-        //DeviceItem gDevItem = null;
+        string DeviceID = null;
         DeviceListener deviceListener = null;
 
         private void PlaySuccessNotify()
@@ -52,10 +50,14 @@ namespace test
             string path = System.IO.Path.GetFullPath(exename);
             string wavfile = path + "..\\Notify.wav";
 
-            SoundPlayer player = new SoundPlayer();
-            player.SoundLocation = wavfile;
-            player.Load();
-            player.Play();
+            if (System.IO.File.Exists(wavfile))
+            {
+                SoundPlayer player = new SoundPlayer();
+                player.SoundLocation = wavfile;
+                player.Load();
+                player.Play();
+            }
+
         }
 
         private void PlayFaultNotify()
@@ -70,7 +72,7 @@ namespace test
 
         private void EventLogin(DeviceListener.Device d)
         {
-            if (DeviceID != 0) return;
+            if (DeviceID != null) return;
 
             DeviceItem item = new DeviceItem();
             item.id = d.id;
@@ -116,24 +118,39 @@ namespace test
             }
 
             panel2.BackColor = SystemColors.Control;
-            _DeviceEx2 DeviceEx = new _DeviceEx2();
-            _Param param = new _Param();
-            int okpack = 0; 
+            int okpack = 0;
             int faultpack = 0;
-            for (int i=0;i<1000;i++)
-            {
-                int ret = NASetupDLL.NaSetup.NpReadSettingEx(d.peerip, "0.0.0.0.0.0", ref DeviceEx, ref param);
+            UdpClient uc = new UdpClient();
+            byte[] cmd = new byte[] {0xff,0xcc,0xcc,0xcc,0xcc,0xcc,
+            0xcc,0xcc,0x01,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,
+            0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,
+            0xcc,0xcc,0x18,0x15};
+            //IPAddress ipaddr = IPAddress.Parse(d.peerip);
+            IPEndPoint ep = new IPEndPoint(IPAddress.Parse(d.peerip), 65276);
+            IPEndPoint rep = new IPEndPoint(IPAddress.Any, 0);
 
-                if (ret == 1)
+            uc.Client.ReceiveTimeout = 1000;
+            for (int i = 0; i < 1000; i++)
+            {
+                uc.Send(cmd, cmd.Length, ep);
+                byte[] rb = uc.Receive(ref rep);
+                if (rb != null)
                 {
-                    okpack++;
-                    
+                    if (rep.Address.ToString().Equals(d.peerip))
+                    {
+                        okpack++;
+                    }
+                    else
+                    {
+                        faultpack++;
+                    }
                 }
                 else
                 {
                     faultpack++;
                 }
-                label5.Text = string.Format("PING SEND={0:D}, RECV={1:D}, DISCARD:{2:D}",i+1,okpack,faultpack);
+
+                label5.Text = string.Format("PING SEND={0:D}, RECV={1:D}, DISCARD:{2:D}", i + 1, okpack, faultpack);
                 if (faultpack > 4) break;
                 Application.DoEvents();
             }
@@ -152,8 +169,7 @@ namespace test
         Thread dataThread;
         private void button8_Click(object sender, EventArgs e)
         {
-            //DeviceItem item = (DeviceItem)comboBox1.SelectedItem;
-            if (DeviceID == 0) return;
+            if (DeviceID == null) return;
             DeviceListener.Device d = deviceListener.Find(DeviceID);
 
             panel3.BackColor = SystemColors.Control;
@@ -236,9 +252,7 @@ namespace test
 
         private void button2_Click_1(object sender, EventArgs e)
         {
-            //string appname = "c:\\arp.ext -d"
-            //System.Diagnostics.Process.Start()
-            DeviceID = 0;
+            DeviceID = null;
             deviceListener.RemoveAll();
             label4.Text = "";
             label5.Text = "";
