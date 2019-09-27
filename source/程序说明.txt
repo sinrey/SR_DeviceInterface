@@ -1,0 +1,18 @@
+	SR_DeviceInterface解决方案说明
+    此解决方案是SR设备接口DLL的完整程序工程与接口示例，使用Visual Studio 2019 Community版本开发。
+    目录说明：
+    AudioDemo_Intercom_DLL:使用DevcieInterface.DLL进行会话的C#例子。
+    AudioDemo_Play_DLL:使用DevcieInterface.DLL进行文件播放和紧急播放的C#例子。
+    AudioDemo_SDCard_DLL:使用DeviceInterface.DLL进行SD卡操作的例子。
+    AudioDemo_Play:不使用动态库的，演示设备文件播放的例子。
+    AudioDemo_Intercom1:不使用动态库，演示电脑与声卡会话的例子。
+    AudioDemo_SDCard：不使用动态库，演示SDCard操作的例子。
+    Commom:所有例子使用的公有源码
+    DeviceInterface:DeviceInterface动态库工程。
+    g711目录下是一个g711的编解码库，编译成动态库供需要的模块使用。
+    package:C#中使用的一些公共模块，主要有Newtonsoft.Json.12.0.2，作为json编解码。
+    SoundCardDLL:声卡操作动态库源码
+    test:设备功能测试源码，使用g711库
+    Win32：解决方案生成的32位DLL与exe保存目录。
+    x86：解决翻案生成的64位DLL与exe保存目录。
+    
