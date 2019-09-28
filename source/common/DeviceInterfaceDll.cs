@@ -97,7 +97,7 @@ namespace Sinrey.DeviceInterface
         private static extern UInt32 _SR_GetLastError();
 
         [DllImport(DLL_NAME, EntryPoint = "SR_Init")]
-        private static extern UInt32 _SR_Init(UInt32 port);
+        private static extern UInt32 _SR_Init(UInt32 mode, UInt32 port);
 
         [DllImport(DLL_NAME, EntryPoint = "SR_Cleanup")]
         private static extern UInt32 _SR_Cleanup();
@@ -177,6 +177,9 @@ namespace Sinrey.DeviceInterface
         private static extern UInt32 _SR_EmergencyClose(UInt32 IVoiceComHandle, UInt32 lUserID, IntPtr lpInputParam, IntPtr lpOutputParam);
         //UINT32 _stdcall SR_StopVoiceCom(UINT32 iVoiceComHandle, LPVOID lpInputParam, LPVOID lpOutputParam);
 
+        [DllImport(DLL_NAME, EntryPoint = "SR_SetVolume")]
+        private static extern UInt32 _SR_SetVolume(UInt32 lUserID, UInt32 volume);
+
 
         public delegate void EventHandler(InterfaceMsg obj);
         public static event EventHandler EventConnect;
@@ -193,12 +196,12 @@ namespace Sinrey.DeviceInterface
         {
             return _SR_GetLastError();
         }
-        public static uint SR_Init(Form f, int port)
+        public static uint SR_Init(Form f, int mode, int port)
         {
             parent = f;
             pExpectionCallBack = new DelegateExpectionCallBack(fExpectionCallBack);
             _SR_SetExceptionCallBack(pExpectionCallBack);
-            return _SR_Init((UInt32)port);
+            return _SR_Init((UInt32)mode, (UInt32)port);
         }
 
         public static uint SR_Cleanup()
@@ -404,6 +407,11 @@ namespace Sinrey.DeviceInterface
         public static uint SR_EmergencyClose(UInt32 IEmergencyHandle, UInt32 userid)
         {
             return _SR_EmergencyClose(IEmergencyHandle, userid, new IntPtr(0), new IntPtr(0));
+        }
+
+        public static uint SR_SetVolume(UInt32 userid, UInt32 volume)
+        {
+            return _SR_SetVolume(userid, volume);
         }
     }
 }

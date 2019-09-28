@@ -30,7 +30,7 @@ namespace AudioDemo_Play_DLL
 
             DeviceInterfaceDll.EventConnect += OnConnected;
             DeviceInterfaceDll.EventLogin += OnLogin;
-            DeviceInterfaceDll.SR_Init(this, 8877);
+            DeviceInterfaceDll.SR_Init(this, 0, 8877);
 
             string exename = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
             string path = System.IO.Path.GetFullPath(exename);
@@ -153,7 +153,7 @@ namespace AudioDemo_Play_DLL
         private void Button3_Click(object sender, EventArgs e)
         {
             //uint id = Convert.ToUInt32(comboBox1.Text);
-            if(comboBox1.Text == "")
+            if(comboBox3.Text == "")
             {
                 MessageBox.Show("please select the user id first.");
                 return;
@@ -331,9 +331,39 @@ namespace AudioDemo_Play_DLL
             {
                 DeviceInterfaceDll.SR_EmergencyClose(sHandle, ap.userid);
                 this.Invoke(h, sHandle, "", true, 0);
-                PlayThread = null;
+                EmergencyPlayThead = null;
             }
 
+        }
+
+        private void Button6_Click(object sender, EventArgs e)
+        {
+            if (comboBox3.Text == "")
+            {
+                MessageBox.Show("please select the user id first.");
+                return;
+            }
+            uint userid = Convert.ToUInt32(comboBox3.Text);
+            DeviceInterfaceDll.SR_SetVolume(userid, (uint)numericUpDown1.Value);
+        }
+
+        private void Button8_Click(object sender, EventArgs e)
+        {
+            if(EmergencyPlayThead != null)
+            {
+                EmergencyPlayThead.Abort();
+            }
+        }
+
+        private void Button7_Click(object sender, EventArgs e)
+        {
+            if (comboBox5.Text == "")
+            {
+                MessageBox.Show("please select the user id first.");
+                return;
+            }
+            uint userid = Convert.ToUInt32(comboBox5.Text);
+            DeviceInterfaceDll.SR_SetVolume(userid, (uint)numericUpDown2.Value);
         }
     }
 }

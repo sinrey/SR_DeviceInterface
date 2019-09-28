@@ -923,3 +923,46 @@ INT DeviceIntercomStop(LPSR_DEVICE_ITEM d)
 {
 	return DevicePlayFileStop(d);
 }
+
+INT DeviceSetVolume(LPSR_DEVICE_ITEM d, UINT32 nVolume)
+{
+	INT nRecvBytes;
+	CHAR sendbuf[COMMAND_BUFFER_SIZE];
+	CHAR recvbuf[COMMAND_BUFFER_SIZE];
+	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	int len = CommandSetVolume(sendbuf, COMMAND_BUFFER_SIZE, nVolume);
+	if (len == 0)return RC_UNKNOWN;
+
+	int ret = SendCommand(d, CMD_SET, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+
+	if (ret == 0)
+	{
+		cJSON* json = cJSON_Parse(recvbuf);
+		if (json != NULL)
+		{
+			cJSON* command = cJSON_GetObjectItem(json, "command");
+			if (strcmp(command->valuestring, CMD_SET) == 0)
+			{
+				cJSON* result = cJSON_GetObjectItem(json, "result");
+
+				if (result != NULL)
+				{
+					if (result->valueint == 200)
+					{
+						ret = RC_OK;
+					}
+					else
+					{
+						ret = RC_ERROR;
+					}
+				}
+				else ret = RC_UNKNOWN;
+
+				cJSON_Delete(json);
+				return ret;
+			}
+		}
+		return RC_UNKNOWN;
+	}
+	return RC_TIMEOUT;
+}

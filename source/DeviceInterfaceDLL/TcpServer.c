@@ -326,7 +326,10 @@ void CALLBACK WorkerRecvRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLA
 			LPSR_DEVICE_ITEM d = SI->pDevice;
 			gfExceptionCallBack(MSGTYPE_DISCONNECTED, d->nUserID, 0, &d);
 			DeviceLock(d);
-			d->Sock = INVALID_SOCKET;
+			if (SI->Socket == d->Sock)
+			{
+				d->Sock = INVALID_SOCKET;
+			}
 			DeviceUnLock(d);
 
 		}

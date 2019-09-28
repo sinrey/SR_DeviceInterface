@@ -33,7 +33,7 @@ namespace AudioDemo_Intercom_DLL
 
             DeviceInterfaceDll.EventConnect += OnConnected;
             DeviceInterfaceDll.EventLogin += OnLogin;
-            DeviceInterfaceDll.SR_Init(this, 8877);
+            DeviceInterfaceDll.SR_Init(this, 0, 8877);
 
             string exename = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
             string path = System.IO.Path.GetFullPath(exename);
@@ -151,7 +151,7 @@ namespace AudioDemo_Intercom_DLL
         Thread dataThread;
         private void Button3_Click(object sender, EventArgs e)
         {
-            if (comboBox1.Text == "")
+            if (comboBox5.Text == "")
             {
                 MessageBox.Show("please select the user id first.");
                 return;

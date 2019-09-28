@@ -10,6 +10,7 @@
 #define CMD_STOP "stop"
 #define CMD_EMERGENCY_START "emergency_start"
 #define CMD_EMERGENCY_STOP "emergency_stop"
+#define CMD_SET "set"
 
 #define CMD_SDCARD_PLAYFILE_STATUS "status_playfile"
 
@@ -34,19 +35,19 @@
 
 #define INPUTSOURCE_MIC "mic"
 
-INT CommandSDCardGetInfo(PCHAR Out, INT OutSize);
-INT CommandRegisterAck(PCHAR Out, INT OutSize, PCHAR session, PCHAR auth, INT err);
-INT CommandSDCardGetFirstFile(PCHAR Out, INT OutSize);
-INT CommandSDCardGetNextFile(PCHAR Out, INT OutSize);
-INT CommandSDCardUploadFile(PCHAR Out, INT OutSize, INT DatPort, PCHAR sFileName, BOOL bCover);
+INT CommandSDCardGetInfo(CHAR* Out, INT OutSize);
+INT CommandRegisterAck(CHAR* Out, INT OutSize, CHAR* session, CHAR* auth, INT err);
+INT CommandSDCardGetFirstFile(CHAR* Out, INT OutSize);
+INT CommandSDCardGetNextFile(CHAR* Out, INT OutSize);
+INT CommandSDCardUploadFile(CHAR* Out, INT OutSize, INT DatPort, CHAR* sFileName, BOOL bCover);
 
-INT CommandSDCardDeleteFile(PCHAR Out, INT OutSize, PCHAR sFileName);
-INT CommandPlayFileStart(PCHAR Out, INT OutSize, INT DatPort, PCHAR sFileName, INT nVolume);
-INT CommandPlayFileStop(PCHAR Out, INT OutSize);
-INT CommandSDCardPlayFileStart(PCHAR Out, INT OutSize, PCHAR sFileName, INT nVolume);
-INT CommandSDCardPlayFileStop(PCHAR Out, INT OutSize);
-INT CommandSDCardPlayFileGetStatus(PCHAR Out, INT OutSize);
-INT CommandIntercomStart(PCHAR Out, INT OutSize, PCHAR sTargetAddr, INT nTargetPort, PCHAR sStreamType, PCHAR sProtocol, INT nInputGain, PCHAR sInputSource, INT nVolume, PCHAR sAecMode, PCHAR sParam);
+INT CommandSDCardDeleteFile(CHAR* Out, INT OutSize, CHAR* sFileName);
+INT CommandPlayFileStart(CHAR* Out, INT OutSize, INT DatPort, CHAR* sFileName, INT nVolume);
+INT CommandPlayFileStop(CHAR* Out, INT OutSize);
+INT CommandSDCardPlayFileStart(CHAR* Out, INT OutSize, CHAR* sFileName, INT nVolume);
+INT CommandSDCardPlayFileStop(CHAR* Out, INT OutSize);
+INT CommandSDCardPlayFileGetStatus(CHAR* Out, INT OutSize);
+INT CommandIntercomStart(CHAR* Out, INT OutSize, CHAR* sTargetAddr, INT nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nInputGain, CHAR* sInputSource, INT nVolume, CHAR* sAecMode, CHAR* sParam);
 
-INT CommandPlayFileEmergencyStart(PCHAR Out, INT OutSize, PCHAR sTargetAddr, INT nTargetPort, PCHAR sStreamType, PCHAR sProtocol, INT nVolume, PCHAR sParam);
-INT CommandPlayFileEmergencyStop(PCHAR Out, INT OutSize);
+INT CommandPlayFileEmergencyStart(CHAR* Out, INT OutSize, CHAR* sTargetAddr, INT nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sParam);
+INT CommandPlayFileEmergencyStop(CHAR* Out, INT OutSize);

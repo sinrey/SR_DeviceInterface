@@ -31,7 +31,7 @@ namespace AudioDemo_SDCard_DLL
 
             DeviceInterfaceDll.EventConnect += OnConnected;
             DeviceInterfaceDll.EventLogin += OnLogin;
-            DeviceInterfaceDll.SR_Init(this, 8877);
+            DeviceInterfaceDll.SR_Init(this, 0, 8877);
 
             string exename = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
             string path = System.IO.Path.GetFullPath(exename);

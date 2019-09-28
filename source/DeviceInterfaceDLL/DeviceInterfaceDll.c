@@ -46,7 +46,7 @@ DWORD gLastError = 0;
 fExceptionCallBack gfExceptionCallBack = NULL;
 CRITICAL_SECTION gCriticalSection = {NULL};//全局变量临界保护区变量
 
-BOOL _stdcall SR_Init(UINT32 ListenPort)
+BOOL _stdcall SR_Init(UINT32 Mode, UINT32 ListenPort)
 {
 	UINT32 Ret;
 	WSADATA wsaData;
@@ -1435,4 +1435,13 @@ UINT32 _stdcall SR_SetExceptionCallBack(fExceptionCallBack pCallBack)
 {
 	gfExceptionCallBack = pCallBack;
 	return 0;
+}
+
+//设置实时播放音量//v0.1.2
+UINT32 _stdcall SR_SetVolume(UINT32 lUserID, UINT32 nVolume)
+{
+	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	if (d == NULL)return RC_INVALID_USER_HANDLE;
+
+	return DeviceSetVolume(d, nVolume);
 }

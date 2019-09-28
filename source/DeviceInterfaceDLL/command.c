@@ -2,7 +2,7 @@
 #include "cJSON.h"
 #include "command.h"
 
-INT CommandSDCardGetInfo(PCHAR Out, INT OutSize)
+INT CommandSDCardGetInfo(CHAR* Out, INT OutSize)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -16,7 +16,7 @@ INT CommandSDCardGetInfo(PCHAR Out, INT OutSize)
 	return jsonlength;
 }
 
-INT CommandSDCardGetFirstFile(PCHAR Out, INT OutSize)
+INT CommandSDCardGetFirstFile(CHAR* Out, INT OutSize)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -30,7 +30,7 @@ INT CommandSDCardGetFirstFile(PCHAR Out, INT OutSize)
 	return jsonlength;
 }
 
-INT CommandSDCardGetNextFile(PCHAR Out, INT OutSize)
+INT CommandSDCardGetNextFile(CHAR* Out, INT OutSize)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -44,7 +44,7 @@ INT CommandSDCardGetNextFile(PCHAR Out, INT OutSize)
 	return jsonlength;
 }
 
-INT CommandSDCardUploadFile(PCHAR Out, INT OutSize, INT DatPort, PCHAR sFileName, BOOL bCover)
+INT CommandSDCardUploadFile(CHAR* Out, INT OutSize, INT DatPort, CHAR* sFileName, BOOL bCover)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -63,7 +63,7 @@ INT CommandSDCardUploadFile(PCHAR Out, INT OutSize, INT DatPort, PCHAR sFileName
 	//
 }
 
-INT CommandSDCardDeleteFile(PCHAR Out, INT OutSize, PCHAR sFileName)
+INT CommandSDCardDeleteFile(CHAR* Out, INT OutSize, CHAR* sFileName)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -78,7 +78,7 @@ INT CommandSDCardDeleteFile(PCHAR Out, INT OutSize, PCHAR sFileName)
 	return jsonlength;
 }
 
-INT CommandPlayFileStart(PCHAR Out, INT OutSize, INT DatPort, PCHAR sFileName, INT nVolume)
+INT CommandPlayFileStart(CHAR* Out, INT OutSize, INT DatPort, CHAR* sFileName, INT nVolume)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -98,7 +98,7 @@ INT CommandPlayFileStart(PCHAR Out, INT OutSize, INT DatPort, PCHAR sFileName, I
 	return jsonlength;
 }
 
-INT CommandAudioStop(PCHAR Out, INT OutSize)
+INT CommandAudioStop(CHAR* Out, INT OutSize)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -112,12 +112,12 @@ INT CommandAudioStop(PCHAR Out, INT OutSize)
 	return jsonlength;
 }
 
-INT CommandPlayFileStop(PCHAR Out, INT OutSize)
+INT CommandPlayFileStop(CHAR* Out, INT OutSize)
 {
 	return CommandAudioStop(Out, OutSize);
 }
 
-INT CommandPlayFileEmergencyStart(PCHAR Out, INT OutSize, PCHAR sTargetAddr, INT nTargetPort, PCHAR sStreamType, PCHAR sProtocol, INT nVolume, PCHAR sParam)
+INT CommandPlayFileEmergencyStart(CHAR* Out, INT OutSize, CHAR* sTargetAddr, INT nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sParam)
 {
 	cJSON* jsonroot = NULL;
 	char* jsonout;
@@ -139,7 +139,7 @@ INT CommandPlayFileEmergencyStart(PCHAR Out, INT OutSize, PCHAR sTargetAddr, INT
 	return jsonlength;
 }
 
-INT CommandPlayFileEmergencyStop(PCHAR Out, INT OutSize)
+INT CommandPlayFileEmergencyStop(CHAR* Out, INT OutSize)
 {
 	cJSON* jsonroot = NULL;
 	char* jsonout;
@@ -153,7 +153,7 @@ INT CommandPlayFileEmergencyStop(PCHAR Out, INT OutSize)
 	return jsonlength;
 }
 
-INT CommandSDCardPlayFileStart(PCHAR Out, INT OutSize, PCHAR sFileName, INT nVolume)
+INT CommandSDCardPlayFileStart(CHAR* Out, INT OutSize, CHAR* sFileName, INT nVolume)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -170,12 +170,12 @@ INT CommandSDCardPlayFileStart(PCHAR Out, INT OutSize, PCHAR sFileName, INT nVol
 	return jsonlength;
 }
 
-INT CommandSDCardPlayFileStop(PCHAR Out, INT OutSize)
+INT CommandSDCardPlayFileStop(CHAR* Out, INT OutSize)
 {
 	return CommandAudioStop(Out, OutSize);
 }
 
-INT CommandSDCardPlayFileGetStatus(PCHAR Out, INT OutSize)
+INT CommandSDCardPlayFileGetStatus(CHAR* Out, INT OutSize)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -189,7 +189,7 @@ INT CommandSDCardPlayFileGetStatus(PCHAR Out, INT OutSize)
 	return jsonlength;
 }
 
-INT CommandIntercomStart(PCHAR Out, INT OutSize, PCHAR sTargetAddr, INT nTargetPort, PCHAR sStreamType, PCHAR sProtocol, INT nInputGain, PCHAR sInputSource, INT nVolume, PCHAR sAecMode, PCHAR sParam)
+INT CommandIntercomStart(CHAR* Out, INT OutSize, CHAR* sTargetAddr, INT nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nInputGain, CHAR* sInputSource, INT nVolume, CHAR* sAecMode, CHAR* sParam)
 {
 	cJSON * jsonroot = NULL;
 	char* jsonout;
@@ -214,12 +214,28 @@ INT CommandIntercomStart(PCHAR Out, INT OutSize, PCHAR sTargetAddr, INT nTargetP
 	return jsonlength;
 }
 
-INT CommandIntercomStop(PCHAR Out, INT OutSize)
+INT CommandIntercomStop(CHAR* Out, INT OutSize)
 {
 	return CommandAudioStop(Out, OutSize); 
 }
 
-INT CommandRegisterAck(PCHAR Out, INT OutSize, PCHAR session, PCHAR auth, INT err)
+INT CommandSetVolume(CHAR* Out, INT OutSize, UINT32 nVolume)
+{
+	cJSON* jsonroot = NULL;
+	char* jsonout;
+	jsonroot = cJSON_CreateObject();
+	cJSON_AddStringToObject(jsonroot, "command", CMD_SET);
+	cJSON_AddNumberToObject(jsonroot, "volume", nVolume);
+
+	jsonout = cJSON_Print(jsonroot);
+	cJSON_Delete(jsonroot);
+	INT jsonlength = (INT)strlen(jsonout);
+	strncpy_s(Out, OutSize, jsonout, jsonlength);
+	free(jsonout);
+	return jsonlength;
+}
+
+INT CommandRegisterAck(CHAR* Out, INT OutSize, CHAR* session, CHAR* auth, INT err)
 //char* CommandRegisterAck(char* session, char* auth, int err)
 {
 	cJSON * jsonroot = NULL;

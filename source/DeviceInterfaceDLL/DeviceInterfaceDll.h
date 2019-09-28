@@ -50,7 +50,7 @@ enum UPLOAD_TYPE
 
 typedef INT32(CALLBACK *fExceptionCallBack)(UINT32 dwType, UINT32 lUserID, UINT32 lHandle, LPVOID pUser);
 
-__declspec(dllexport) BOOL _stdcall SR_Init(UINT32 ListenPort);
+__declspec(dllexport) BOOL _stdcall SR_Init(UINT32 Mode, UINT32 ListenPort);
 __declspec(dllexport) BOOL _stdcall SR_Cleanup();
 __declspec(dllexport) UINT32 _stdcall SR_GetLastError();
 __declspec(dllexport) UINT32 _stdcall SR_GetVersion();
@@ -82,3 +82,5 @@ __declspec(dllexport) UINT32 _stdcall SR_EmergencyData(UINT32 iEmergencyHandle, 
 __declspec(dllexport) UINT32 _stdcall SR_EmergencyClose(UINT32 iEmergencyHandle, UINT32 lUserID,LPVOID lpInputParam, LPVOID lpOutputParam);
 
 __declspec(dllexport) UINT32 _stdcall SR_SetExceptionCallBack(fExceptionCallBack pCallBack);
+
+__declspec(dllexport) UINT32 _stdcall SR_SetVolume(UINT32 lUserID, UINT32 nVolume);

@@ -250,6 +250,7 @@
             this.button6.TabIndex = 45;
             this.button6.Text = "Set";
             this.button6.UseVisualStyleBackColor = true;
+            this.button6.Click += new System.EventHandler(this.Button6_Click);
             // 
             // comboBox2
             // 
@@ -431,6 +432,7 @@
             this.button7.TabIndex = 45;
             this.button7.Text = "Set";
             this.button7.UseVisualStyleBackColor = true;
+            this.button7.Click += new System.EventHandler(this.Button7_Click);
             // 
             // comboBox4
             // 
@@ -533,6 +535,7 @@
             this.button8.TabIndex = 35;
             this.button8.Text = "stop";
             this.button8.UseVisualStyleBackColor = true;
+            this.button8.Click += new System.EventHandler(this.Button8_Click);
             // 
             // button9
             // 
