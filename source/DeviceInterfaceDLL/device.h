@@ -88,3 +88,8 @@ INT DeviceIntercomStop(LPSR_DEVICE_ITEM d);
 INT DeviceEmergencyPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sFileName);
 INT DeviceEmergencyPlayFileStop(LPSR_DEVICE_ITEM d);
 
+INT DeviceUpdateStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, INT nMode, CHAR* sFileName);
+
+INT DeviceSetVolume(LPSR_DEVICE_ITEM d, UINT32 nVolume);
+INT DeviceApply(LPSR_DEVICE_ITEM d);
+

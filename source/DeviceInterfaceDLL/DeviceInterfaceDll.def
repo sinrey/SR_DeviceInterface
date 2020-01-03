@@ -26,3 +26,10 @@ EXPORTS
 	SR_Emergency
 	SR_EmergencyData
 	SR_EmergencyClose
+
+	SR_Update
+	SR_UpdateData
+	SR_UpdateClose
+
+	SR_Apply
+

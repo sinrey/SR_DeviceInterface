@@ -186,6 +186,10 @@ namespace AudioDemo
                                 micpack_length += pcmbuf.Length;
                             }
 
+                            if (checkBox1.Checked)
+                            {
+                                Array.Clear(pcmbuf, 0, pcmbuf.Length);
+                            }
 
                             //byte[] ba = g711encode.Process(pcmbuf);
                             byte[] ba = g711.g711Encode_ulwa(pcmbuf);

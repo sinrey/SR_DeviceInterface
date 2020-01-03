@@ -592,6 +592,94 @@ INT DeviceUploadFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName,
 	return RC_TIMEOUT;
 }
 
+INT DeviceUpdateStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, INT nMode, CHAR* sFileName)
+{
+	INT nRecvBytes;
+	CHAR sendbuf[COMMAND_BUFFER_SIZE];
+	CHAR recvbuf[COMMAND_BUFFER_SIZE];
+	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	int len = CommandUpdate(sendbuf, COMMAND_BUFFER_SIZE, nDataPort, nMode, sFileName);
+	if (len == 0)return RC_UNKNOWN;
+
+	int ret = SendCommand(d, CMD_UPDATE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+
+	if (ret == 0)
+	{
+		cJSON* json = cJSON_Parse(recvbuf);
+		if (json != NULL)
+		{
+			cJSON* command = cJSON_GetObjectItem(json, "command");
+			if (strcmp(command->valuestring, CMD_UPDATE) == 0)
+			{
+				cJSON* result = cJSON_GetObjectItem(json, "result");
+
+				if (result != NULL)
+				{
+					if ((result->valueint == 100) || (result->valueint == 200))
+					{
+						ret = RC_OK;
+					}
+					else
+					{
+						ret = RC_ERROR;
+					}
+				}
+				else ret = RC_UNKNOWN;
+
+				cJSON_Delete(json);
+				return ret;
+			}
+		}
+		return RC_UNKNOWN;
+	}
+	return RC_TIMEOUT;
+}
+
+INT DeviceApply(LPSR_DEVICE_ITEM d)
+{
+	INT nRecvBytes;
+	CHAR sendbuf[COMMAND_BUFFER_SIZE];
+	CHAR recvbuf[COMMAND_BUFFER_SIZE];
+	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	int len = CommandApply(sendbuf, COMMAND_BUFFER_SIZE);
+	if (len == 0)return RC_UNKNOWN;
+
+	int ret = SendCommand(d, CMD_APPLY, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+
+	if (ret == 0)
+	{
+		cJSON* json = cJSON_Parse(recvbuf);
+		if (json != NULL)
+		{
+			cJSON* command = cJSON_GetObjectItem(json, "command");
+			if (strcmp(command->valuestring, CMD_APPLY) == 0)
+			{
+				cJSON* result = cJSON_GetObjectItem(json, "result");
+
+				if (result != NULL)
+				{
+					if ((result->valueint == 100) || (result->valueint == 200))
+					{
+						ret = RC_OK;
+					}
+					else
+					{
+						ret = RC_ERROR;
+					}
+				}
+				else ret = RC_UNKNOWN;
+
+				cJSON_Delete(json);
+				return ret;
+			}
+		}
+		return RC_UNKNOWN;
+	}
+	return RC_TIMEOUT;
+	//
+//INT CommandApply(CHAR* Out, INT OutSize)
+}
+
 //当前函数仅支持mp3文件的播放
 //sFileName仅作为播放信息使用，函数并不操作该文件。
 INT DevicePlayFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName, INT nVolume)

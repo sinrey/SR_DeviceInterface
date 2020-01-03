@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioDemo_SDCard_DLL", "Aud
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "g711", "g711\g711.vcxproj", "{E5A1E1F4-8820-4BFD-B0EA-C5F032B49EF9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioDemo_Update_DLL", "AudioDemo_Update_DLL\AudioDemo_Update_DLL.csproj", "{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -213,6 +215,24 @@ Global
 		{E5A1E1F4-8820-4BFD-B0EA-C5F032B49EF9}.Release|x64.Build.0 = Release|x64
 		{E5A1E1F4-8820-4BFD-B0EA-C5F032B49EF9}.Release|x86.ActiveCfg = Release|Win32
 		{E5A1E1F4-8820-4BFD-B0EA-C5F032B49EF9}.Release|x86.Build.0 = Release|Win32
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Debug|x64.ActiveCfg = Debug|x64
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Debug|x64.Build.0 = Debug|x64
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Debug|x86.Build.0 = Debug|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.release_xp|Any CPU.ActiveCfg = Release|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.release_xp|Any CPU.Build.0 = Release|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.release_xp|x64.ActiveCfg = Release|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.release_xp|x64.Build.0 = Release|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.release_xp|x86.ActiveCfg = Release|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.release_xp|x86.Build.0 = Release|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Release|x64.ActiveCfg = Release|x64
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Release|x64.Build.0 = Release|x64
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Release|x86.ActiveCfg = Release|Any CPU
+		{D1BBCB53-296B-44F0-B754-9FFBA1AC8FEB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -217,7 +217,10 @@ namespace AudioDemo_Intercom_DLL
                                         Array.Copy(pcmbuf, 0, micpack, micpack_length, pcmbuf.Length);
                                         micpack_length += pcmbuf.Length;
                                     }
-
+                                    if (checkBox1.Checked)
+                                    {
+                                        Array.Clear(pcmbuf, 0, pcmbuf.Length);
+                                    }
                                     short[] pcmbuf1 = DeviceInterfaceDll.SR_VoiceComData(h, pcmbuf);
 
                                     if (pcmbuf1 != null)

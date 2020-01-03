@@ -180,6 +180,22 @@ namespace Sinrey.DeviceInterface
         [DllImport(DLL_NAME, EntryPoint = "SR_SetVolume")]
         private static extern UInt32 _SR_SetVolume(UInt32 lUserID, UInt32 volume);
 
+        [DllImport(DLL_NAME, EntryPoint = "SR_Update")]
+        private static extern UInt32 _SR_Update(ref UInt32 lUpdateHandle, UInt32 lUserID, UInt32 nMode, IntPtr sFileName, IntPtr lpInputParam, IntPtr lpOutputParam);
+        //UINT32 _stdcall SR_UploadFile_V40(UINT32* lUploadHandle, UINT32 lUserID, CONST CHAR* sFileName, UINT32 dwUploadType, BOOL bCover, LPVOID lpInputParam, LPVOID lpOutputParam)
+
+        [DllImport(DLL_NAME, EntryPoint = "SR_UpdateData")]
+        private static extern UInt32 _SR_UpdateData(UInt32 lUpdateHandle, IntPtr lpInBuffer, UInt32 BufferSize, IntPtr lpInputParam, IntPtr lpOutputParam);
+        //UINT32 _stdcall SR_Upload_Process(UINT32* lUploadHandle, PCHAR lpInBuffer, UINT32 BufferSize, LPVOID lpInputParam, LPVOID lpOutputParam)
+
+        [DllImport(DLL_NAME, EntryPoint = "SR_UpdateClose")]
+        private static extern UInt32 _SR_UpdateClose(UInt32 lUpdateHandle, IntPtr lpInputParam, IntPtr lpOutputParam);
+        //UINT32 _stdcall SR_UploadClose(UINT32 lUploadHandle, LPVOID lpInputParam, LPVOID lpOutputParam)
+
+        [DllImport(DLL_NAME, EntryPoint = "SR_Apply")]
+        private static extern UInt32 _SR_Apply(UInt32 lUpdateHandle);
+        //UINT32 _stdcall SR_UploadClose(UINT32 lUploadHandle, LPVOID lpInputParam, LPVOID lpOutputParam)
+
 
         public delegate void EventHandler(InterfaceMsg obj);
         public static event EventHandler EventConnect;
@@ -284,6 +300,28 @@ namespace Sinrey.DeviceInterface
         public static uint SR_UploadClose(UInt32 lUploadHandle)
         {
             return _SR_UploadFileClose(lUploadHandle, new IntPtr(0), new IntPtr(0));
+        }
+
+        public static uint SR_Update(out UInt32 lUpdateHandle, UInt32 lUserID, UInt32 nMode, string sFileName)
+        {
+            UInt32 Handle = 0;
+            IntPtr fn = Marshal.StringToHGlobalAnsi(sFileName);
+            uint ret = _SR_Update(ref Handle, lUserID, nMode, fn, new IntPtr(0), new IntPtr(0));
+            lUpdateHandle = Handle;
+            Marshal.FreeHGlobal(fn);
+            return ret;
+        }
+
+        public static uint SR_UpdateData(UInt32 lUpdateHandle, byte[] lpInBuffer, int nSize)
+        {
+            IntPtr pbuf = Marshal.AllocHGlobal(nSize);
+            Marshal.Copy(lpInBuffer, 0, pbuf, nSize);
+            return _SR_UpdateData(lUpdateHandle, pbuf, (UInt32)nSize, new IntPtr(0), new IntPtr(0));
+        }
+
+        public static uint SR_UpdateClose(UInt32 lUpdateHandle)
+        {
+            return _SR_UpdateClose(lUpdateHandle, new IntPtr(0), new IntPtr(0));
         }
         public static uint SR_PlayFile(out UInt32 lUploadHandle, UInt32 lUserID, string sFileName, UInt32 nVolume)
         {
@@ -412,6 +450,11 @@ namespace Sinrey.DeviceInterface
         public static uint SR_SetVolume(UInt32 userid, UInt32 volume)
         {
             return _SR_SetVolume(userid, volume);
+        }
+
+        public static uint SR_Apply(UInt32 userid)
+        {
+            return _SR_Apply(userid);
         }
     }
 }

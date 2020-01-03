@@ -30,6 +30,8 @@ namespace Sinrey.Device
         {
             public string command;
             public string id;
+            public string version;
+            public string type;
             public string authentication;
             public string session;
             public string auth_dir;
@@ -143,11 +145,21 @@ namespace Sinrey.Device
             public int volume;
         }
 
+        private class CommandFirmwareUpdate
+        {
+            public string command;
+            public string mode;//0=bin;1=pak
+            public string dataserver;
+            public int dataserverport;
+        }
+
         public class Device
         {
             public string username;
             public string password;
             public string id;
+            public string version;
+            public string devicetype;
             public int loginState;
             public string peerip;
             public int peerport;
@@ -377,6 +389,8 @@ namespace Sinrey.Device
                                                 ns.Write(bs, 0, bs.Length);
                                             }
                                             d.id = cr.id;
+                                            d.version = cr.version;
+                                            d.devicetype = cr.type;
                                             d.loginState = 2;
                                         }
                                     }
@@ -451,43 +465,51 @@ namespace Sinrey.Device
             byte[] rs = new byte[2048];
             while (true)
             {
-                int len = ns.Read(rs, 0, rs.Length);
-                if (len > 0)
+                try
                 {
-                    d.PushBytes(rs, len);
-
-                    //检查缓冲内是否有期望的回应
-                    while (true)
+                    int len = ns.Read(rs, 0, rs.Length);
+                    if (len > 0)
                     {
-                        string jsontext2 = d.GetOneJsonText();
-                        if (jsontext2 != null)
+                        d.PushBytes(rs, len);
+
+                        //检查缓冲内是否有期望的回应
+                        while (true)
                         {
-                            CommandAck c = JsonConvert.DeserializeObject<CommandAck>(jsontext2);
-                            if (c.command.Equals(command))
+                            string jsontext2 = d.GetOneJsonText();
+                            if (jsontext2 != null)
                             {
-                                result = jsontext2;
-                                break;
+                                CommandAck c = JsonConvert.DeserializeObject<CommandAck>(jsontext2);
+                                if (c.command.Equals(command))
+                                {
+                                    result = jsontext2;
+                                    break;
+                                }
+                                else
+                                {
+                                    //未能处理的消息,加入到未决回应序列。
+                                    jsonack.Add(jsontext2);
+                                }
                             }
                             else
                             {
-                                //未能处理的消息,加入到未决回应序列。
-                                jsonack.Add(jsontext2);
+                                //没有有效的回应，退出检查，再次读取网络数据
+                                break;
                             }
-                        }
-                        else
-                        {
-                            //没有有效的回应，退出检查，再次读取网络数据
-                            break;
-                        }
                         
+                        }
+                        if (result != null) break;
                     }
-                    if (result != null) break;
+                    else
+                    {
+                        //网络无数据了。
+                        break;
+                    }
                 }
-                else
+                catch (Exception)
                 {
-                    //网络无数据了。
                     break;
                 }
+
             }
 
             //未处理的回应，将其序列化后再次填入接收缓存,由监听线程处理。
@@ -503,9 +525,30 @@ namespace Sinrey.Device
         private string SendCommand(Device d, string command, string jsontext)
         {
             byte[] bs = System.Text.Encoding.Default.GetBytes(jsontext);
-            NetworkStream ns = d.tcpClient.GetStream();
-            ns.Write(bs, 0, bs.Length);
-            return WaitAck(d, command);
+            string ack;
+            try
+            {
+                NetworkStream ns = d.tcpClient.GetStream();
+                ns.Write(bs, 0, bs.Length);
+                ack = WaitAck(d, command);
+            }
+            catch (Exception ex)
+            {
+                ack = null;
+            }
+            return ack;
+            /*
+            if (d.tcpClient.Connected)
+            {
+                NetworkStream ns = d.tcpClient.GetStream();
+                ns.Write(bs, 0, bs.Length);
+                return WaitAck(d, command);
+            }
+            else 
+            {
+                return null;
+            }
+            */
         }
 
         public int AudioClose(Device d)
@@ -963,6 +1006,61 @@ namespace Sinrey.Device
                 }
             }
             return -1;
+        }
+
+        public int  FirmwareUpdate(Device d, string s_ip, int s_port, string fname, string mode)
+        {
+            int result = 0;
+            CommandFirmwareUpdate cs = new CommandFirmwareUpdate();
+            cs.command = "update";
+            cs.mode = mode;
+            cs.dataserver = s_ip;
+            cs.dataserverport = s_port;
+
+            string jsontext = JsonConvert.SerializeObject(cs);
+            string ack = null;
+            lock (d)
+            {
+                ack = SendCommand(d, "update", jsontext);
+            }
+
+            if (ack != null)
+            {
+                CommandStartAck csa = JsonConvert.DeserializeObject<CommandStartAck>(ack);
+                if (csa.result == 100)
+                {
+                    result = 0;
+                }
+                else result = -2;
+
+            }
+            else result = -1;
+            return result;
+        }
+
+        public int Apply(Device d)
+        {
+            int result = 0;
+            Command cs = new Command();
+            cs.command = "apply";
+            string jsontext = JsonConvert.SerializeObject(cs);
+            string ack = null;
+            lock (d)
+            {
+                ack = SendCommand(d, "apply", jsontext);
+            }
+            if (ack != null)
+            {
+                CommandAck csa = JsonConvert.DeserializeObject<CommandAck>(ack);
+                if (csa.result == 200)
+                {
+                    result = 0;
+                }
+                else result = -2;
+
+            }
+            else result = -1;
+            return result;
         }
     }
 }

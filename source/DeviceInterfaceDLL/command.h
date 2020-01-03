@@ -11,6 +11,8 @@
 #define CMD_EMERGENCY_START "emergency_start"
 #define CMD_EMERGENCY_STOP "emergency_stop"
 #define CMD_SET "set"
+#define CMD_UPDATE "update"
+#define CMD_APPLY "apply"
 
 #define CMD_SDCARD_PLAYFILE_STATUS "status_playfile"
 
@@ -51,3 +53,6 @@ INT CommandIntercomStart(CHAR* Out, INT OutSize, CHAR* sTargetAddr, INT nTargetP
 
 INT CommandPlayFileEmergencyStart(CHAR* Out, INT OutSize, CHAR* sTargetAddr, INT nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sParam);
 INT CommandPlayFileEmergencyStop(CHAR* Out, INT OutSize);
+INT CommandSetVolume(CHAR* Out, INT OutSize, UINT32 nVolume);
+INT CommandUpdate(CHAR* Out, INT OutSize, INT nTargetPort, INT nMode, CHAR* sFilename);
+INT CommandApply(CHAR* Out, INT OutSize);

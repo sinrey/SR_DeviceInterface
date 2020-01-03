@@ -84,3 +84,9 @@ __declspec(dllexport) UINT32 _stdcall SR_EmergencyClose(UINT32 iEmergencyHandle,
 __declspec(dllexport) UINT32 _stdcall SR_SetExceptionCallBack(fExceptionCallBack pCallBack);
 
 __declspec(dllexport) UINT32 _stdcall SR_SetVolume(UINT32 lUserID, UINT32 nVolume);
+
+__declspec(dllexport) UINT32 _stdcall SR_Update(UINT32* lUpdateHandle, UINT32 lUserID, INT nMode, CONST CHAR* sFileName, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_UpdateData(UINT32 lUpdateHandle, CHAR* lpInBuffer, UINT32 BufferSize, LPVOID lpInputParam, LPVOID lpOutputParam);
+__declspec(dllexport) UINT32 _stdcall SR_UpdateClose(UINT32 lUpdateHandle, LPVOID lpInputParam, LPVOID lpOutputParam);
+
+__declspec(dllexport) UINT32 _stdcall SR_Apply(UINT32 lUserID);

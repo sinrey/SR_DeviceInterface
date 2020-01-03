@@ -343,7 +343,7 @@ namespace AudioDemo_SDCard_DLL
             {
                 try
                 {
-                    int count = 0;
+                    long count = 0;
                     byte[] bdata = new byte[1024];
                     FileStream fs = File.OpenRead(ap.filename);
                     if (fs != null)

@@ -235,6 +235,39 @@ INT CommandSetVolume(CHAR* Out, INT OutSize, UINT32 nVolume)
 	return jsonlength;
 }
 
+INT CommandUpdate(CHAR* Out, INT OutSize, INT nTargetPort, INT nMode, CHAR* sFilename)
+{
+	cJSON* jsonroot = NULL;
+	char* jsonout;
+	jsonroot = cJSON_CreateObject();
+	cJSON_AddStringToObject(jsonroot, "command", CMD_UPDATE);
+	if(nMode == 0)cJSON_AddStringToObject(jsonroot, "mode", "bin");
+	else if(nMode == 1)cJSON_AddStringToObject(jsonroot, "mode", "data");
+	cJSON_AddStringToObject(jsonroot, "dataserver", "0.0.0.0");
+	cJSON_AddNumberToObject(jsonroot, "dataserverport", nTargetPort);
+	cJSON_AddStringToObject(jsonroot, "param", sFilename);
+	jsonout = cJSON_Print(jsonroot);
+	cJSON_Delete(jsonroot);
+	INT jsonlength = (INT)strlen(jsonout);
+	strncpy_s(Out, OutSize, jsonout, jsonlength);
+	free(jsonout);
+	return jsonlength;
+}
+
+INT CommandApply(CHAR* Out, INT OutSize)
+{
+	cJSON* jsonroot = NULL;
+	char* jsonout;
+	jsonroot = cJSON_CreateObject();
+	cJSON_AddStringToObject(jsonroot, "command", CMD_APPLY);
+	jsonout = cJSON_Print(jsonroot);
+	cJSON_Delete(jsonroot);
+	INT jsonlength = (INT)strlen(jsonout);
+	strncpy_s(Out, OutSize, jsonout, jsonlength);
+	free(jsonout);
+	return jsonlength;
+}
+
 INT CommandRegisterAck(CHAR* Out, INT OutSize, CHAR* session, CHAR* auth, INT err)
 //char* CommandRegisterAck(char* session, char* auth, int err)
 {

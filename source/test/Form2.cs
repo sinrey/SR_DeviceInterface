@@ -33,10 +33,6 @@ namespace test
             chart1.ChartAreas[0].AxisX.Maximum = 480;
             chart1.ChartAreas[0].AxisY.Maximum = 32768;
             chart1.ChartAreas[0].AxisY.Minimum = -32768;
-
-            dataThread = new Thread(IntercomThread);
-            dataThread.IsBackground = true;
-            dataThread.Start();
         }
 
         private int xl = 0;
@@ -82,7 +78,17 @@ namespace test
 
             DeviceListener.Device d = deviceListener.Find(DeviceID);
 
-            UdpClient udpserver = new UdpClient(9999);
+            UdpClient udpserver;
+            try
+            {
+                udpserver = new UdpClient(9999);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("port is in use");
+                return;
+            }
+            
             int port = 9999;
             DelegateShowWave h = new DelegateShowWave(ShowWave);
 
@@ -129,7 +135,7 @@ namespace test
                             if (packet.PayloadType == RtpPayloadType.G711_uLaw)
                             {
                                 short[] pcmbuf1 = g711.g711Decode_ulaw(packet.Payload);
-                                this.BeginInvoke(h, pcmbuf1);
+                                this.Invoke(h, pcmbuf1);
                             }
                         }
                     }
@@ -141,6 +147,13 @@ namespace test
 
                 udpserver.Close();
             }
+        }
+
+        private void Form2_Shown(object sender, EventArgs e)
+        {
+            dataThread = new Thread(IntercomThread);
+            dataThread.IsBackground = true;
+            dataThread.Start();
         }
     }
 }
