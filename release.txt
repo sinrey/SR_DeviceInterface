@@ -1,0 +1,2 @@
+v0.1.3 
+支持旧的设备认证模式，旧认证模式，id=数值，auth=md5(password@username)

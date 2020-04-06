@@ -81,6 +81,8 @@ namespace test
             if (pakfiles.Length > 0) checkBox2.Text = pakfiles[0];
         }
 
+
+
         private void EventLogin(DeviceListener.Device d)
         {
             if ((DeviceID != null)&&(DeviceID.Equals(d.id)==false)) return;
@@ -262,7 +264,7 @@ namespace test
 
         private void button7_Click(object sender, EventArgs e)
         {
-            panel4.BackColor = SystemColors.Control;
+            panel4.BackColor = SystemColors.Control;//
 
             Form2 f2 = new Form2();
             f2.deviceListener = deviceListener;

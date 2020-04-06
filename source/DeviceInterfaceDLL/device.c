@@ -279,38 +279,72 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 							cJSON* auth_dir = cJSON_GetObjectItem(json, "auth_dir");
 							cJSON* id = cJSON_GetObjectItem(json, "id");
 
-							//if (id != NULL)d->uID = id->valueint;
-							if (id != NULL)strcpy_s(d->uID, sizeof(d->uID), id->valuestring);
-
-							//char* jsontext;
 							int len = 0;
-							if ((session != NULL) && (authentication != NULL))
+							if (session != NULL)
 							{
+								//if (id != NULL)d->uID = id->valueint;
+								if (id != NULL)strcpy_s(d->uID, sizeof(d->uID), id->valuestring);
+
+								//char* jsontext;
+								
+								if ((session != NULL) && (authentication != NULL))
+								{
+									char tmpbuf[256];
+									sprintf_s(tmpbuf, sizeof(tmpbuf), "%s@%s@%s", session->valuestring, d->LogInfo.sUserName, d->LogInfo.sPassword);
+									char* s = MDString(tmpbuf);
+
+
+									if (strcmp(s, authentication->valuestring) == 0)
+									{
+										if ((auth_dir != NULL) && (strcmp(auth_dir->valuestring, "bi-direction") == 0))
+										{
+											UINT64 tick = GetTickCount64();
+											//char tmpbuf[256];
+											char session[64];
+											sprintf_s(tmpbuf, sizeof(tmpbuf), "%8x%8x", (UINT32)(tick >> 32), (UINT32)tick);
+											char* s = MDString(tmpbuf);
+											strncpy_s(session, sizeof(session), s, strlen(s));
+											sprintf_s(tmpbuf, sizeof(tmpbuf), "%s@%s@%s", session, d->LogInfo.sUserName, d->LogInfo.sPassword);
+											char* auth = MDString(tmpbuf);
+
+											//d->nLoginStats = 1;
+
+											//jsontext = CommandRegisterAck(session, auth, RESULT_OK);
+											len = CommandRegisterAck(out, sizeof(out), session, auth, RESULT_OK);
+										}
+										else//仅服务器鉴权
+										{
+											len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_OK);
+										}
+										d->nLoginStats = 1;
+									}
+									else//鉴权失败，非法设备登录
+									{
+										len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_REGISTER_FAULT);
+									}
+								}
+								else//设备登录数据不包含必须字段。
+								{
+									len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_REGISTER_FAULT);
+								}
+							}
+							else////v0.1.3
+							{
+								if(id != NULL)sprintf_s(d->uID, sizeof(d->uID), "%u", id->valueint);
+
 								char tmpbuf[256];
-								sprintf_s(tmpbuf, sizeof(tmpbuf), "%s@%s@%s", session->valuestring, d->LogInfo.sUserName, d->LogInfo.sPassword);
+								sprintf_s(tmpbuf, sizeof(tmpbuf), "%s@%s", d->LogInfo.sPassword, d->LogInfo.sUserName);
 								char* s = MDString(tmpbuf);
 
-								
 								if (strcmp(s, authentication->valuestring) == 0)
 								{
-									if ((auth_dir != NULL)&&(strcmp(auth_dir->valuestring, "bi-direction") == 0))
+									if ((auth_dir != NULL) && (strcmp(auth_dir->valuestring, "bi-direction") == 0))
 									{
-										UINT64 tick = GetTickCount64();
-										//char tmpbuf[256];
-										char session[64];
-										sprintf_s(tmpbuf, sizeof(tmpbuf), "%8x%8x", (UINT32)(tick >> 32), (UINT32)tick);
-										char* s = MDString(tmpbuf);
-										strncpy_s(session, sizeof(session), s, strlen(s));
-										sprintf_s(tmpbuf, sizeof(tmpbuf), "%s@%s@%s", session, d->LogInfo.sUserName, d->LogInfo.sPassword);
-										char* auth = MDString(tmpbuf);
-
-										//d->nLoginStats = 1;
-
-										//jsontext = CommandRegisterAck(session, auth, RESULT_OK);
-										len = CommandRegisterAck(out, sizeof(out), session, auth, RESULT_OK);
+										char* auth = MDString(d->LogInfo.sPassword);
+										len = CommandRegisterAck(out, sizeof(out), NULL, auth, RESULT_OK);
 									}
 									else//仅服务器鉴权
-									{									
+									{
 										len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_OK);
 									}
 									d->nLoginStats = 1;
@@ -319,10 +353,6 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 								{
 									len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_REGISTER_FAULT);
 								}
-							}
-							else//设备登录数据不包含必须字段。
-							{
-								len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_REGISTER_FAULT);
 							}
 							TcpServerSend(d->Sock, out, len);
 						}

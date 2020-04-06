@@ -8,6 +8,7 @@ DLL的TCP服务采用重叠IO的完成例程模式，以支持大量和高效的客户端连接。
 每个设备连接对应一个DEVICE_ITEM设备结构，所有结构用单向链表组织。（可以使用哈希表的方式，在大量设备连接时提供快速的查询）
 JSON的序列化和反序列化采用开源的cJson库
 版本：v0.1
+//v0.1.3 支持旧的设备认证模式，旧认证模式，id=数值，auth=md5(password@username)
 */
 
 #include <windows.h>
@@ -24,7 +25,7 @@ JSON的序列化和反序列化采用开源的cJson库
 #include "../common/g722/g722.h"
 //#include <WinSock2.h>
 
-#define Version 0x00010002
+#define Version 0x00010003
 typedef struct
 {
 	UINT Handle;

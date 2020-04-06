@@ -57,6 +57,7 @@ namespace Sinrey.SoundCard
         //, ManualResetEventSlim mEvent
         public static int SoundCardInit(uint nSamplerate)
         {
+            if ((nSamplerate != 8000) && (nSamplerate != 16000)) return -1;
             SoundCardCallback = new DelegateSoundCardCallBack(pSoundCardCallBack);
             mEvent = new ManualResetEventSlim(false);
             return _SoundCardInit(nSamplerate, SoundCardCallback,0);

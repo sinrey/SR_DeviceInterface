@@ -357,6 +357,90 @@ namespace Sinrey.Device
                                 CommandRegister cr = JsonConvert.DeserializeObject<CommandRegister>(jsontext);
                                 if (d.loginState == 1)
                                 {
+                                    if (cr.session != null)
+                                    {
+                                        //新的登录方式
+                                        if (cr.authentication != null)
+                                        {
+                                            MD5 md5 = new MD5CryptoServiceProvider();
+                                            byte[] auth = System.Text.Encoding.Default.GetBytes(cr.session + "@" + arg.username + "@" + arg.password);
+                                            byte[] tmp = md5.ComputeHash(auth);
+                                            string md5str = null;
+
+                                            for (int i = 0; i < tmp.Length; i++) md5str += tmp[i].ToString("x2");
+
+                                            if (cr.authentication.Equals(md5str))
+                                            {
+                                                string session = Guid.NewGuid().ToString("N");
+                                                byte[] bs1 = System.Text.Encoding.Default.GetBytes(session + "@" + arg.username + "@" + arg.password);
+                                                byte[] tmp1 = md5.ComputeHash(bs1);
+                                                string md52 = null;
+
+                                                for (int i = 0; i < tmp.Length; i++) md52 += tmp1[i].ToString("x2");
+
+                                                CommandRegister cr2 = new CommandRegister();
+                                                cr2.command = "register";
+                                                cr2.result = 200;
+                                                cr2.session = session;
+                                                cr2.authentication = md52;
+
+                                                string jsontext1 = JsonConvert.SerializeObject(cr2);
+                                                NetworkStream ns = d.tcpClient.GetStream();
+                                                //if (ns.CanWrite)
+                                                {
+                                                    byte[] bs = System.Text.Encoding.Default.GetBytes(jsontext1);
+                                                    ns.Write(bs, 0, bs.Length);
+                                                }
+                                                d.id = cr.id;
+                                                d.version = cr.version;
+                                                d.devicetype = cr.type;
+                                                d.loginState = 2;
+                                            }
+                                        }
+                                    }
+                                    else //旧登录方式
+                                    {
+                                        if (cr.authentication != null)
+                                        {
+                                            MD5 md5 = new MD5CryptoServiceProvider();
+                                            byte[] auth = System.Text.Encoding.Default.GetBytes(arg.password + "@" + arg.username);
+                                            byte[] tmp = md5.ComputeHash(auth);
+                                            string md5str = null;
+
+                                            for (int i = 0; i < tmp.Length; i++) md5str += tmp[i].ToString("x2");
+
+                                            if (cr.authentication.Equals(md5str))
+                                            {
+                                                string session = Guid.NewGuid().ToString("N");
+                                                byte[] bs1 = System.Text.Encoding.Default.GetBytes(arg.password);
+                                                byte[] tmp1 = md5.ComputeHash(bs1);
+                                                string md52 = null;
+
+                                                for (int i = 0; i < tmp.Length; i++) md52 += tmp1[i].ToString("x2");
+
+                                                CommandRegister cr2 = new CommandRegister();
+                                                cr2.command = "register";
+                                                cr2.result = 200;
+
+                                                if ((cr.auth_dir != null)&&(cr.auth_dir.Equals("bi-direction")))
+                                                {
+                                                    cr2.authentication = md52;
+                                                }
+                                                string jsontext1 = JsonConvert.SerializeObject(cr2);
+                                                NetworkStream ns = d.tcpClient.GetStream();
+                                                //if (ns.CanWrite)
+                                                {
+                                                    byte[] bs = System.Text.Encoding.Default.GetBytes(jsontext1);
+                                                    ns.Write(bs, 0, bs.Length);
+                                                }
+                                                d.id = cr.id;
+                                                d.version = cr.version;
+                                                d.devicetype = cr.type;
+                                                d.loginState = 2;
+                                            }
+                                        }
+                                    }
+                                    /*
                                     if ((cr.authentication != null) && (cr.session != null))
                                     {
                                         MD5 md5 = new MD5CryptoServiceProvider();
@@ -394,6 +478,7 @@ namespace Sinrey.Device
                                             d.loginState = 2;
                                         }
                                     }
+                                    */
                                 }
                                 else if (d.loginState == 2)
                                 {
@@ -521,7 +606,6 @@ namespace Sinrey.Device
 
             return result;
         }
-
         private string SendCommand(Device d, string command, string jsontext)
         {
             byte[] bs = System.Text.Encoding.Default.GetBytes(jsontext);
@@ -865,7 +949,7 @@ namespace Sinrey.Device
                         {
                             result = 0;
                         }
-                        else result = -4;
+                        else result = cdf2.result;
                     }
                     else result = -3;
                 }
@@ -889,6 +973,7 @@ namespace Sinrey.Device
             {
                 ack = SendCommand(d, "status_playfile", jsontext);
             }
+            int result = -1;
             if (ack != null)
             {
                 CommandPlayFileStatusAck cpf = JsonConvert.DeserializeObject<CommandPlayFileStatusAck>(ack);
@@ -899,11 +984,15 @@ namespace Sinrey.Device
                     process = cpf.process;
                     return 0;
                 }
+                else
+                {
+                    result = cpf.result;
+                }
             }
             filename = null;
             runtime = 0;
             process = 0;
-            return -1;
+            return result;
         }
 
         public int SDCardPlayFileStop(Device d)
