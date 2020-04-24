@@ -20,7 +20,8 @@ typedef struct _SOCKET_INFORMATION {
 	SOCKET Socket;
 	CHAR Buffer[DATA_BUFSIZE];
 	WSABUF DataBuf;
-	LPVOID pDevice;
+	CHAR Address[128];//v0.2.1
+	//LPVOID pDevice;//v0.2.1
 	//DWORD BytesSEND;
 	//DWORD BytesRECV;
 } SOCKET_INFORMATION, *LPSOCKET_INFORMATION;
@@ -127,6 +128,28 @@ DWORD WINAPI TcpServerThread(LPVOID* lpParameter)
 }
 */
 
+//v0.2.1
+SOCKET _Accept(SOCKET ListenSocket, struct sockaddr* RemoteAddr, int timeout)
+{
+	SOCKET sock;
+	fd_set fread;
+	struct timeval tv = {timeout/1000,1000*(timeout % 1000)};
+	FD_ZERO(&fread);
+	FD_SET(ListenSocket, &fread);
+	int ret = select(ListenSocket + 1, &fread, NULL, NULL, &tv);
+	if (ret > 0)
+	{
+		if (FD_ISSET(ListenSocket, &fread))
+		{
+			int size = sizeof(struct sockaddr);
+			sock = accept(ListenSocket, RemoteAddr, &size);
+			return sock;
+		}
+	}
+	return INVALID_SOCKET;
+
+}
+
 DWORD WINAPI TcpServerThread(LPVOID* lpParameter)
 {
 	SOCKET ListenSocket;
@@ -157,11 +180,15 @@ DWORD WINAPI TcpServerThread(LPVOID* lpParameter)
 	while (TRUE)
 	{
 		int size = sizeof(RemoteAddr);
-		AcceptSocket = accept(ListenSocket, (struct sockaddr*) & RemoteAddr, &size);
+		//AcceptSocket = accept(ListenSocket, (struct sockaddr*) & RemoteAddr, &size);//V0.2.1
+		AcceptSocket = _Accept(ListenSocket, &RemoteAddr, 1000);
 		//if (WSASetEvent(AcceptEvent) == FALSE)
 		//{
 		//	return FALSE;
 		//}
+		DeviceTick();//v0.2.1 心跳，检查设备连接超时事件
+
+		if (AcceptSocket == INVALID_SOCKET)continue;
 		SOCKADDR_IN Addr;
 		memcpy(&Addr, &RemoteAddr, sizeof(Addr));
 
@@ -173,43 +200,60 @@ DWORD WINAPI TcpServerThread(LPVOID* lpParameter)
 		}
 		char tmpbuf[128];
 		char* ipstr = inet_ntop(AF_INET, (const void*)& Addr.sin_addr, tmpbuf, sizeof(tmpbuf));
-		LPSR_DEVICE_ITEM d = DeviceFindByAddr(ipstr);
+		//LPSR_DEVICE_ITEM d = DeviceFindByAddr(ipstr);//DeviceGetByAddr
+		LPSR_DEVICE_ITEM d = DeviceGetByAddr(ipstr);//v0.2.1
 		if (d != NULL)
 		{
-			SocketInfo->pDevice = d;
+			//SocketInfo->pDevice = d;//v0.2.1
 			if (d->Sock != INVALID_SOCKET)
 				closesocket(d->Sock);
-			DeviceLock(d);
+			//DeviceLock(d);//v0.2.1
 			d->Sock = AcceptSocket;
 			d->nPeerIp = Addr.sin_addr.S_un.S_addr;
 			d->nPeerPort = Addr.sin_port;
 			d->nLoginStats = 0;
-			DeviceUnLock(d);
+			//DeviceUnLock(d);//v0.2.1
+			//if (gfExceptionCallBack != NULL)gfExceptionCallBack(MSGTYPE_CONNECTED, d->nUserID, 0, &d);
+			//访问d是不安全的，这里修改为访问一个d的拷贝，只读。
+			if (gfExceptionCallBack != NULL)
+			{
+				gfExceptionCallBack(MSGTYPE_CONNECTED, d->nUserID, 0, &d);
+			}
+
+			//SocketInfo->lUserID = d->nUserID;
+			DeviceRelease(d);//v0.2.1
+
+			strncpy_s(SocketInfo->Address, sizeof(SocketInfo->Address), ipstr, sizeof(tmpbuf));//v0.2.1
 			SocketInfo->Socket = AcceptSocket;
 			ZeroMemory(&(SocketInfo->Overlapped), sizeof(WSAOVERLAPPED));
 			SocketInfo->DataBuf.len = DATA_BUFSIZE;
 			SocketInfo->DataBuf.buf = SocketInfo->Buffer;
 
-			if (gfExceptionCallBack != NULL)gfExceptionCallBack(MSGTYPE_CONNECTED, d->nUserID, 0, &d);
-
+			//检查刚连接上了的设备是否发送了数据。
 			Flags = 0;
 			fd_set fread;
 			FD_ZERO(&fread);
-			FD_SET(d->Sock, &fread);
+			FD_SET(AcceptSocket, &fread); //v0.2.1
 			struct timeval tv;
 			tv.tv_sec = 0;
 			tv.tv_usec = 0;
-			int ret = select(d->Sock + 1, &fread, NULL, NULL, &tv);
+			int ret = select(AcceptSocket + 1, &fread, NULL, NULL, &tv);//v0.2.1
 			if (ret > 0)
 			{
 				char recvbuf[1440];
-				int rlen = recv(d->Sock, recvbuf, sizeof(recvbuf), 0);
+				int rlen = recv(AcceptSocket, recvbuf, sizeof(recvbuf), 0);
 				if (rlen > 0)
 				{
-					DeviceLock(d);
-					FifoPush(&d->Fifo, recvbuf, rlen);
-					CommandProcess(d);
-					DeviceUnLock(d);
+					LPSR_DEVICE_ITEM d = DeviceGetByAddr(ipstr);//v0.2.1//DeviceLock(d);
+					if (d != NULL)
+					{
+						FifoPush(&d->Fifo, recvbuf, rlen);
+						CommandProcess(d);
+						DeviceRelease(d);
+					}
+					//FifoPush(&d->Fifo, recvbuf, rlen);
+					//CommandProcess(d);
+					//DeviceUnLock(d);
 				}
 			}
 
@@ -316,33 +360,48 @@ void CALLBACK WorkerRecvRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLA
 	DWORD RecvBytes;
 	LPSOCKET_INFORMATION SI = (LPSOCKET_INFORMATION)Overlapped;
 
+	//SOCKADDR_IN addr;
+	//int size = sizeof(addr);
+	//int ret = getpeername(SI->Socket, (struct sockaddr*) & addr, &size);
+	//char tmpbuf[128];//v0.2.1
+	//char* ipstr = inet_ntop(AF_INET, (const void*)&addr.sin_addr, tmpbuf, sizeof(tmpbuf));//v0.2.1
+	char* ipstr = SI->Address;
+
 	if (Error != 0 || BytesTransferred == 0)
 	{
-		SOCKADDR_IN addr;
-		int size = sizeof(addr);
-		getpeername(SI->Socket, (struct sockaddr*)&addr, &size);
 		if (gfExceptionCallBack != NULL)
 		{
-			LPSR_DEVICE_ITEM d = SI->pDevice;
-			gfExceptionCallBack(MSGTYPE_DISCONNECTED, d->nUserID, 0, &d);
-			DeviceLock(d);
-			if (SI->Socket == d->Sock)
+			LPSR_DEVICE_ITEM d = DeviceGetByAddr(ipstr);// SI->pDevice;
+			if (d != NULL)
 			{
-				d->Sock = INVALID_SOCKET;
+				//DeviceLock(d);
+				if (SI->Socket == d->Sock)
+				{
+					d->Sock = INVALID_SOCKET;
+					gfExceptionCallBack(MSGTYPE_DISCONNECTED, d->nUserID, 0, &d);//回调被放入if语句中，只有在判式为真才触发回调。(如果设备复位，会首先accept，然后才会触发回调，执行本段程序）)
+				}
+				//gfExceptionCallBack(MSGTYPE_DISCONNECTED, d->nUserID, 0, &d);
+				DeviceRelease(d);//DeviceUnLock(d);//v0.2.1
 			}
-			DeviceUnLock(d);
-
 		}
 		closesocket(SI->Socket);
 		GlobalFree(SI);
 		return;
 	}
 
-	LPSR_DEVICE_ITEM d = SI->pDevice;
-	DeviceLock(d);
-	FifoPush(&d->Fifo, SI->DataBuf.buf, BytesTransferred);
-	CommandProcess(d);
-	DeviceUnLock(d);
+	//v0.2.1 替换下面被屏蔽的源码，原来的源码有可能在操作时，d已经被释放。
+	LPSR_DEVICE_ITEM d = DeviceGetByAddr(ipstr);
+	if (d != NULL)
+	{
+		FifoPush(&d->Fifo, SI->DataBuf.buf, BytesTransferred);
+		CommandProcess(d);
+		DeviceRelease(d);
+	}
+	//LPSR_DEVICE_ITEM d = SI->pDevice;
+	//DeviceLock(d);
+	//FifoPush(&d->Fifo, SI->DataBuf.buf, BytesTransferred);
+	//CommandProcess(d);
+	//DeviceUnLock(d);
 
 	Flags = 0;
 	ZeroMemory(&(SI->Overlapped), sizeof(WSAOVERLAPPED));

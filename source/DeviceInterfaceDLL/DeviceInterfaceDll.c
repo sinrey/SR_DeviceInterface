@@ -9,6 +9,17 @@ DLL的TCP服务采用重叠IO的完成例程模式，以支持大量和高效的客户端连接。
 JSON的序列化和反序列化采用开源的cJson库
 版本：v0.1
 //v0.1.3 支持旧的设备认证模式，旧认证模式，id=数值，auth=md5(password@username)
+//v0.1.3 问题1：在TcpServerThread线程中，SI->pDevice指向一个设备结构的内存指针，不安全。当用户注销这个设备时，这个指针变成野指针，指向没有意义的内存。
+//		 问题2：通过DeviceFind或得到设备D指针，没有临界区或互斥量的保护，不安全。在使用期间如果用户注销设备，可导致操作异常。
+//       问题3：读取SD卡信息函数，函数返回时间与SD卡速度，容量，格式有关。有时候，默认的等待延时3000ms不够，导致SR_GetCapacity函数返回操作错误。
+//v0.2.1 2020-04-06
+//		 modify:使用DeviceGet，DeviceGetByAddr替代DeviceFind和DeviceFindByAddr，Get函数在获得设备D的结构指针后，立即对D进行加锁，使用完成后需要调用DeviceRelease解锁。
+//		 modify:TcpServerThread不再使用指向设备D的指针，而是使用Ip地址，每次使用设备D前都通过DeviceGetByAddr获取。
+//		 modify:原来使用设备D指针的函数修改为使用UserID序号，在需要操作设备D时，通过DeviceGet获取。
+//		 modify:读SD卡容量信息函数，最大延时修改为8000ms
+//		 add:SR_USER_LOGIN_INFO结构体添加uTimeOut成员，取值[10,3600]秒，设备通讯超时后调用回调函数。添加MSGTYPE_TIMEOUT，MSGTYPE_RECONNECT枚举,用于描述设备超时事件和再连接事件。
+//		     添加DeviceTick函数，在TcpServerThread线程定时调用，用于判断超时事件。
+//		 [注]：不要在gfExceptionCallBack回调调用本动态库的函数，在回调函数中不应进行耗时的工作，不要在回调中更新用户界面UI。
 */
 
 #include <windows.h>
@@ -92,7 +103,8 @@ UINT32 _stdcall SR_GetVersion()
 */
 UINT32 _stdcall SR_Login(LPSR_USER_LOGIN_INFO pLoginInfo, LPSR_DEVICEINFO lpDeviceInfo)
 {
-	LPSR_DEVICE_ITEM d = DeviceFindByAddr(pLoginInfo->sDeviceAddress);
+	//LPSR_DEVICE_ITEM d = DeviceFindByAddr(pLoginInfo->sDeviceAddress);
+	LPSR_DEVICE_ITEM d = DeviceGetByAddr(pLoginInfo->sDeviceAddress);
 	if (d == NULL)
 	{
 		LPSR_DEVICE_ITEM d = DeviceAdd(pLoginInfo, lpDeviceInfo);
@@ -105,6 +117,7 @@ UINT32 _stdcall SR_Login(LPSR_USER_LOGIN_INFO pLoginInfo, LPSR_DEVICEINFO lpDevi
 	}
 	else
 	{
+		DeviceRelease(d);
 		return -1;
 	}
 }
@@ -121,10 +134,14 @@ UINT32 _stdcall SR_GetCapacity(UINT32 lUserID, CHAR* lpJsonBuffer, UINT32 nJsonB
 	UINT32 tol=0;
 	UINT32 fre=0;
 	cJSON* jsonroot = cJSON_CreateObject();
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
-	ret = DeviceGetDiskInfo(d, &tol, &fre);
+
+	ret = DeviceGetDiskInfo(lUserID, &tol, &fre);
 	if (ret != 0)return ret;
+
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//ret = DeviceGetDiskInfo(d, &tol, &fre);
+	//if (ret != 0)return ret;
 	cJSON_AddNumberToObject(jsonroot, "totalCapacity", tol);
 	cJSON_AddNumberToObject(jsonroot, "surplusCapacity", fre);
 	
@@ -137,12 +154,12 @@ UINT32 _stdcall SR_GetCapacity(UINT32 lUserID, CHAR* lpJsonBuffer, UINT32 nJsonB
 		UINT32 nFileSize;
 		if (count == 0)
 		{
-			ret = DeviceGetFirstFile(d, sFileName, sizeof(sFileName), &nFileSize);
+			ret = DeviceGetFirstFile(lUserID, sFileName, sizeof(sFileName), &nFileSize);
 			count++;
 		}
 		else
 		{
-			ret = DeviceGetNextFile(d, sFileName, sizeof(sFileName), &nFileSize);
+			ret = DeviceGetNextFile(lUserID, sFileName, sizeof(sFileName), &nFileSize);
 			count++;
 		}
 		if ((ret == RC_OK)&&(sFileName[0]))
@@ -182,21 +199,27 @@ UINT32 _stdcall SR_GetCapacity(UINT32 lUserID, CHAR* lpJsonBuffer, UINT32 nJsonB
 //删除sd卡内的文件
 UINT32 _stdcall SR_DeleteFile(UINT32 lUserID, CONST CHAR* sFileName, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	UINT32 ret = DeviceDeleteFile(lUserID, (CONST CHAR*)sFileName);
+	return ret;
 
-	return DeviceDeleteFile(d, (CONST CHAR*)sFileName);
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//return DeviceDeleteFile(d, (CONST CHAR*)sFileName);
 }
 
 //开始播放sd卡内文件
 UINT32 _stdcall SR_PutFile(UINT32 lUserID, CONST CHAR* sFileName, UINT32 nVolume, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
 	int result = -1;
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
 	if (nVolume > 100)nVolume = 100;
-	result = DeviceSDCardPlayFileStart(d, (CHAR*)sFileName, nVolume);
-	return result;
+	result = DeviceSDCardPlayFileStart(lUserID, (CHAR*)sFileName, nVolume);
+	return (UINT32)result;
+
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (nVolume > 100)nVolume = 100;
+	//result = DeviceSDCardPlayFileStart(d, (CHAR*)sFileName, nVolume);
+	//return result;
 }
 
 //获取播放sd卡文件的进度信息
@@ -204,24 +227,35 @@ UINT32 _stdcall SR_PutFileStatus(UINT32 lUserID, UINT32* nProcess, LPVOID lpInpu
 {
 	int result = -1;
 	int runtime, process;
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
-	result = DeviceSDCardPlayFileGetStatus(d, &runtime, &process);
+
+	result = DeviceSDCardPlayFileGetStatus(lUserID, &runtime, &process);
 	if (result == 0)
 	{
 		*nProcess = process;
 	}
 	return result;
+
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//result = DeviceSDCardPlayFileGetStatus(d, &runtime, &process);
+	//if (result == 0)
+	//{
+	//	*nProcess = process;
+	//}
+	//return result;
 }
 
 //终止sd文件播放
 UINT32 _stdcall SR_PutFileClose(UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
 	int result = -1;
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
-	result = DeviceSDCardPlayFileStop(d);
+	result = DeviceSDCardPlayFileStop(lUserID);
 	return result;
+
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//result = DeviceSDCardPlayFileStop(d);
+	//return result;
 }
 
 UINT32 TcpListen(SOCKET *sock, UINT32* port)
@@ -296,10 +330,9 @@ UINT32 TcpAccept(UINT32 nPeerIp, SOCKET sock, SOCKET* accept_sock)
 UINT32 _stdcall SR_PlayFile(UINT32* lPlayHandle, UINT32 lUserID, CONST CHAR* sFileName, UINT32 nVolume, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
 	int result = -1;
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
 
 	SOCKET listen_sock;
+	UINT32 ip;
 	UINT32 port;
 	UINT32 ret = TcpListen(&listen_sock, &port);
 	if (ret != RC_OK)return ret;
@@ -311,11 +344,21 @@ UINT32 _stdcall SR_PlayFile(UINT32* lPlayHandle, UINT32 lUserID, CONST CHAR* sFi
 	else p = sFileName;
 	strncpy_s(fname, sizeof(fname), p, strlen(p));
 
-	ret = DevicePlayFileStart(d, port, fname, nVolume);
+	//v0.2.1
+	LPSR_DEVICE_ITEM d = DeviceGet(lUserID);
+	if (d == NULL)
+	{
+		closesocket(listen_sock);
+		return RC_INVALID_USER_HANDLE;
+	}
+	ip = d->nPeerIp;
+	DeviceRelease(d);
+	ret = DevicePlayFileStart(lUserID, port, fname, nVolume);
+	
 	if (ret == RC_OK)
 	{
 		SOCKET accept_sock;
-		ret = TcpAccept(d->nPeerIp, listen_sock, &accept_sock);
+		ret = TcpAccept(ip, listen_sock, &accept_sock);
 		if (ret == RC_OK)
 		{
 			*lPlayHandle = (UINT32)accept_sock;
@@ -357,10 +400,9 @@ UINT32 _stdcall SR_PlayFileClose(UINT32 lPlayHandle, LPVOID lpInputParam, LPVOID
 UINT32 _stdcall SR_UploadFile(UINT32* lUploadHandle, UINT32 lUserID, CONST CHAR* sFileName, BOOL bCover, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
 	int result = RC_UNKNOWN;
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
 
 	SOCKET listen_sock;
+	UINT32 ip;
 	UINT32 port;
 	UINT32 ret = TcpListen(&listen_sock, &port);
 	if (ret != RC_OK)return ret;
@@ -372,11 +414,21 @@ UINT32 _stdcall SR_UploadFile(UINT32* lUploadHandle, UINT32 lUserID, CONST CHAR*
 	else p = sFileName;
 	strncpy_s(fname, sizeof(fname), p, strlen(p));
 
-	ret = DeviceUploadFileStart(d, port, fname, bCover);
+	//v0.2.1
+	LPSR_DEVICE_ITEM d = DeviceGet(lUserID);
+	if (d == NULL)
+	{
+		closesocket(listen_sock);
+		return RC_INVALID_USER_HANDLE;
+	}
+	ip = d->nPeerIp;
+	DeviceRelease(d);
+	ret = DeviceUploadFileStart(lUserID, port, fname, bCover);
+	
 	if (ret == RC_OK)
 	{
 		SOCKET accept_sock;
-		ret = TcpAccept(d->nPeerIp, listen_sock, &accept_sock);
+		ret = TcpAccept(ip, listen_sock, &accept_sock);
 		if (ret == RC_OK)
 		{
 			*lUploadHandle = (UINT32)accept_sock;
@@ -419,10 +471,9 @@ UINT32 _stdcall SR_UploadFileClose(UINT32 lUploadHandle, LPVOID lpInputParam, LP
 UINT32 _stdcall SR_Update(UINT32* lUpdateHandle, UINT32 lUserID, INT nMode, CONST CHAR* sFileName, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
 	int result = RC_UNKNOWN;
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
 
 	SOCKET listen_sock;
+	UINT32 ip;
 	UINT32 port;
 	UINT32 ret = TcpListen(&listen_sock, &port);
 	if (ret != RC_OK)return ret;
@@ -434,11 +485,22 @@ UINT32 _stdcall SR_Update(UINT32* lUpdateHandle, UINT32 lUserID, INT nMode, CONS
 	else p = sFileName;
 	strncpy_s(fname, sizeof(fname), p, strlen(p));
 
-	ret = DeviceUpdateStart(d, port, nMode, fname);
+	//v0.2.1
+	LPSR_DEVICE_ITEM d = DeviceGet(lUserID);
+	if (d == NULL)
+	{
+		closesocket(listen_sock);
+		return RC_INVALID_USER_HANDLE;
+	}
+	ip = d->nPeerIp;
+	DeviceRelease(d);
+
+	ret = DeviceUpdateStart(lUserID, port, nMode, fname);
+	
 	if (ret == RC_OK)
 	{
 		SOCKET accept_sock;
-		ret = TcpAccept(d->nPeerIp, listen_sock, &accept_sock);
+		ret = TcpAccept(ip, listen_sock, &accept_sock);
 		if (ret == RC_OK)
 		{
 			*lUpdateHandle = (UINT32)accept_sock;
@@ -568,7 +630,7 @@ INT RtpSessionCreate(LPRTP_SESSION* rtpsession)
 		{
 			session->Handle = ((LPRTP_SESSION)gRtpSessionList->data)->Handle + 1;
 		}
-		LeaveCriticalSection(&gCriticalSection);
+		//LeaveCriticalSection(&gCriticalSection);
 
 		session->LocalPort = htons(local_addr.sin_port);
 		session->udpsock = udpsock;
@@ -577,8 +639,14 @@ INT RtpSessionCreate(LPRTP_SESSION* rtpsession)
 		rtp_init(&session->rtp, PAYLOAD_G722);
 		g722_reset_decoder(&session->Decoder);
 		g722_reset_encoder(&session->Encoder);
+		LeaveCriticalSection(&gCriticalSection);//v0.2.1
+
 		*rtpsession = session;
-		return 0;
+		return RC_OK;
+	}
+	else//v0.2.1
+	{
+		closesocket(udpsock);
 	}
 	return RC_ERROR;
 
@@ -801,13 +869,51 @@ UINT32 _stdcall RtpSessionData(LPRTP_SESSION session, PCHAR pSendDataBuffer, UIN
 //SR_StartVoiceCom_V30，SR_VoiceCom_Data，SR_StopVoiceCom共同使用完成会话功能。
 UINT32 _stdcall SR_VoiceCom(UINT32* iVoiceComHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 
 	LPRTP_SESSION session;
 	int ret = RtpSessionCreate(&session);
+	if (ret != RC_OK)return ret;
+
+	LPSR_DEVICE_ITEM d = DeviceGet(lUserID);
+	if (d == NULL)
+	{
+		RtpSessionDestroy(session);
+		return RC_INVALID_USER_HANDLE;
+	}
+	UINT32 ip = d->nPeerIp;
+	DeviceRelease(d);
+	ret = DeviceIntercomStart(lUserID, NULL, session->LocalPort, STREAMTYPE_G722, PROTOCOL_RTP, 20, INPUTSOURCE_MIC, 97, AECMODE_DISABLE, d->uID);
+	if (ret == RC_OK)
+	{
+		char buffer[1024];
+		int  nRecvBytes;
+		UINT32 RemoteIp;
+		UINT32 RemotePort;
+		int rlen = UdpRecv(session->udpsock, buffer, sizeof(buffer), &nRecvBytes, &RemoteIp, &RemotePort);
+		if ((rlen == 0) && (nRecvBytes > 0) && (RemoteIp == ip))//设备连接
+		{
+			session->PeerIp = RemoteIp;
+			session->PeerPort = RemotePort;
+			EnterCriticalSection(&gCriticalSection);
+			gRtpSessionList = ListAdd(gRtpSessionList, session);
+			LeaveCriticalSection(&gCriticalSection);
+			*iVoiceComHandle = session->Handle;
+			return RC_OK;
+		}
+	}
+	RtpSessionDestroy(session);
+	return RC_ERROR;
+	/*
 	if (ret == 0)
 	{
+		//v0.2.1
+		LPSR_DEVICE_ITEM d = DeviceGet(lUserID);
+		if (d != NULL)
+		{
+
+		}
 		ret = DeviceIntercomStart(d, NULL, session->LocalPort, STREAMTYPE_G722, PROTOCOL_RTP, 20, INPUTSOURCE_MIC, 97, AECMODE_DISABLE, d->uID);
 		if (ret == RC_OK)
 		{
@@ -831,6 +937,7 @@ UINT32 _stdcall SR_VoiceCom(UINT32* iVoiceComHandle, UINT32 lUserID, LPVOID lpIn
 		RtpSessionDestroy(session);
 	}
 	return RC_ERROR;
+	*/
 }
 
 UINT32 _stdcall SR_VoiceComData(UINT32 iVoiceComHandle, CHAR* pSendDataBuffer, UINT32 nSendBufferSize, PCHAR pRecvDataBuffer, UINT32 nRecvBufferSize, UINT32* nRecvBytes, LPVOID lpInputParam, LPVOID lpOutputParam)
@@ -848,10 +955,11 @@ UINT32 _stdcall SR_VoiceComData(UINT32 iVoiceComHandle, CHAR* pSendDataBuffer, U
 
 UINT32 _stdcall SR_VoiceComClose(UINT32 iVoiceComHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	DeviceIntercomStop(lUserID);
 
-	DeviceIntercomStop(d);
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//DeviceIntercomStop(d);
 
 	LPRTP_SESSION session;
 	int ret = RtpSessionFind(&session, iVoiceComHandle);
@@ -861,6 +969,42 @@ UINT32 _stdcall SR_VoiceComClose(UINT32 iVoiceComHandle, UINT32 lUserID, LPVOID 
 
 UINT32 _stdcall SR_Emergency(UINT32* iEmergencyHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
+	//0.2.1
+	LPRTP_SESSION session;
+	int ret = RtpSessionCreate(&session);
+	if (ret != RC_OK)return ret;
+
+	LPSR_DEVICE_ITEM d = DeviceGet(lUserID);
+	if (d == NULL)
+	{
+		RtpSessionDestroy(session);
+		return RC_INVALID_USER_HANDLE;
+	}
+	UINT32 ip = d->nPeerIp;
+	DeviceRelease(d);
+	ret = DeviceEmergencyPlayFileStart(lUserID, NULL, session->LocalPort, STREAMTYPE_G722, PROTOCOL_RTP, 97, d->uID);
+	if (ret == RC_OK)
+	{
+		char buffer[1024];
+		int  nRecvBytes;
+		UINT32 RemoteIp;
+		UINT32 RemotePort;
+		int rlen = UdpRecv(session->udpsock, buffer, sizeof(buffer), &nRecvBytes, &RemoteIp, &RemotePort);
+		if ((rlen == 0) && (nRecvBytes > 0) && (RemoteIp == d->nPeerIp))//设备连接
+		{
+			session->PeerIp = RemoteIp;
+			session->PeerPort = RemotePort;
+			EnterCriticalSection(&gCriticalSection);
+			gRtpSessionList = ListAdd(gRtpSessionList, session);
+			LeaveCriticalSection(&gCriticalSection);
+			*iEmergencyHandle = session->Handle;
+			return RC_OK;
+		}
+	}
+	RtpSessionDestroy(session);
+	return RC_ERROR;
+
+	/*
 	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
 	if (d == NULL)return RC_INVALID_USER_HANDLE;
 
@@ -891,6 +1035,7 @@ UINT32 _stdcall SR_Emergency(UINT32* iEmergencyHandle, UINT32 lUserID, LPVOID lp
 		RtpSessionDestroy(session);
 	}
 	return RC_ERROR;
+	*/
 }
 
 UINT32 _stdcall SR_EmergencyData(UINT32 iEmergencyHandle, CHAR* pSendDataBuffer, UINT32 nSendBufferSize, CHAR* pRecvDataBuffer, UINT32 nRecvBufferSize, UINT32* nRecvBytes, LPVOID lpInputParam, LPVOID lpOutputParam)
@@ -909,10 +1054,12 @@ UINT32 _stdcall SR_EmergencyData(UINT32 iEmergencyHandle, CHAR* pSendDataBuffer,
 
 UINT32 _stdcall SR_EmergencyClose(UINT32 iEmergencyHandle, UINT32 lUserID, LPVOID lpInputParam, LPVOID lpOutputParam)
 {
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	DeviceEmergencyPlayFileStop(lUserID);
 
-	DeviceEmergencyPlayFileStop(d);
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
+
+	//DeviceEmergencyPlayFileStop(d);
 
 	LPRTP_SESSION session;
 	int ret = RtpSessionFind(&session, iEmergencyHandle);
@@ -928,16 +1075,20 @@ UINT32 _stdcall SR_SetExceptionCallBack(fExceptionCallBack pCallBack)
 //设置实时播放音量//v0.1.2
 UINT32 _stdcall SR_SetVolume(UINT32 lUserID, UINT32 nVolume)
 {
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	INT32 ret = DeviceSetVolume(lUserID, nVolume);
+	return ret;
 
-	return DeviceSetVolume(d, nVolume);
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//return DeviceSetVolume(d, nVolume);
 }
 
 UINT32 _stdcall SR_Apply(UINT32 lUserID)
 {
-	LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	INT32 ret = DeviceApply(lUserID);
+	return ret;
 
-	return DeviceApply(d);
+	//LPSR_DEVICE_ITEM d = DeviceFind(lUserID);
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//return DeviceApply(d);
 }

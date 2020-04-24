@@ -16,6 +16,8 @@ namespace Sinrey.DeviceInterface
         public const uint MSGTYPE_DISCONNECTED = 2;
         public const uint MSGTYPE_DEVICE_LOGIN = 3;
         public const uint MSGTYPE_DEVICE_LOGOUT = 4;
+        public const uint MSGTYPE_TIMEOUT = 5;
+        public const uint MSGTYPE_RECONNECT = 6;
 
         public const uint RC_OK = 0;
         public const uint RC_UNKNOWN = 1;
@@ -37,7 +39,8 @@ namespace Sinrey.DeviceInterface
             public string sUserName;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
             public string sPassword;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public int uTimeOut;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 124)]
             public string byRes2;
         };
 
@@ -79,7 +82,7 @@ namespace Sinrey.DeviceInterface
                 obj.LParam = LParam;//lHandle
                 parent.BeginInvoke(EventConnect, obj);
             }
-            else if ((MsgType == MSGTYPE_DEVICE_LOGIN) || (MsgType == MSGTYPE_DEVICE_LOGOUT))
+            else if ((MsgType == MSGTYPE_DEVICE_LOGIN) || (MsgType == MSGTYPE_DEVICE_LOGOUT) || (MsgType == MSGTYPE_TIMEOUT) || (MsgType == MSGTYPE_RECONNECT))
             {
                 InterfaceMsg obj = new InterfaceMsg();
                 obj.msg = MsgType;
@@ -104,6 +107,9 @@ namespace Sinrey.DeviceInterface
 
         [DllImport(DLL_NAME, EntryPoint = "SR_Login")]
         private static extern UInt32 _SR_Login(IntPtr pLoginInfo, IntPtr lpDeviceInfo);
+
+        [DllImport(DLL_NAME, EntryPoint = "SR_Logout")]
+        private static extern UInt32 _SR_Logout(UInt32 lUserID);
 
         [DllImport(DLL_NAME, EntryPoint = "SR_SetExceptionCallBack")]
         private static extern UInt32 _SR_SetExceptionCallBack(DelegateExpectionCallBack pCallBack);
@@ -235,6 +241,7 @@ namespace Sinrey.DeviceInterface
             userInfo.sDeviceAddress = ip;
             userInfo.sUserName = username;
             userInfo.sPassword = password;
+            userInfo.uTimeOut = 60;
 
             IntPtr p1 = Marshal.AllocHGlobal(Marshal.SizeOf(userInfo));
             Marshal.StructureToPtr<SR_USER_LOGIN_INFO>(userInfo, p1, true);
@@ -250,6 +257,11 @@ namespace Sinrey.DeviceInterface
             Marshal.FreeHGlobal(p2);
 
             return ret;
+        }
+
+        public static uint SR_Logout(UInt32 userid)
+        {
+            return _SR_Logout(userid);
         }
 
         //SR_GetCapacity函数耗时与sd卡内的文件成正比，如有必要请在线程内调用。

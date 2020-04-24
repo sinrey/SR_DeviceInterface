@@ -79,25 +79,59 @@ namespace AudioDemo_Play_DLL
         {
             //string str = string.Format("msgtype={0:D};wpamra={1:X};lparam={2:D}\r\n", msg.msg, msg.WParam, msg.LParam);
             //textBox1.AppendText(str);
+            uint msgtype = msg.msg;
             uint userid = msg.WParam;
-            foreach (ListViewItem item in listView1.Items)
+            if ((msgtype == DeviceInterfaceDll.MSGTYPE_DEVICE_LOGIN)||(msgtype == DeviceInterfaceDll.MSGTYPE_RECONNECT))
             {
-                uint id = Convert.ToUInt32(item.SubItems[1].Text);
-                if (id == userid)
+                foreach (ListViewItem item in listView1.Items)
                 {
-                    item.ImageIndex = 2;
-                    PlayNotify();
-                    comboBox3.Text = id.ToString();
-                    comboBox5.Text = id.ToString();
-                    break;
+                    uint id = Convert.ToUInt32(item.SubItems[1].Text);
+                    if (id == userid)
+                    {
+                        item.ImageIndex = 2;
+                        PlayNotify();
+                        comboBox3.Text = id.ToString();
+                        comboBox5.Text = id.ToString();
+                        break;
+                    }
                 }
             }
+            else if (msgtype == DeviceInterfaceDll.MSGTYPE_TIMEOUT)
+            {
+                foreach (ListViewItem item in listView1.Items)
+                {
+                    uint id = Convert.ToUInt32(item.SubItems[1].Text);
+                    if (id == userid)
+                    {
+                        item.ImageIndex = 1;
+                        PlayFaultNotify();
+                        break;
+                    }
+                }
+                
+            }
+
         }
         private void PlayNotify()
         {
             string exename = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
             string path = System.IO.Path.GetFullPath(exename);
             string wavfile = path + "..\\Notify.wav";
+
+            if (System.IO.File.Exists(wavfile))
+            {
+                SoundPlayer player = new SoundPlayer();
+                player.SoundLocation = wavfile;
+                player.Load();
+                player.Play();
+            }
+        }
+
+        private void PlayFaultNotify()
+        {
+            string exename = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
+            string path = System.IO.Path.GetFullPath(exename);
+            string wavfile = path + "..\\Warning.wav";
 
             if (System.IO.File.Exists(wavfile))
             {
@@ -364,6 +398,15 @@ namespace AudioDemo_Play_DLL
             }
             uint userid = Convert.ToUInt32(comboBox5.Text);
             DeviceInterfaceDll.SR_SetVolume(userid, (uint)numericUpDown2.Value);
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (comboBox3.Text != null)
+            {
+                uint userid = Convert.ToUInt32(comboBox3.Text);
+                uint ret = DeviceInterfaceDll.SR_Logout(userid);
+            }
         }
     }
 }

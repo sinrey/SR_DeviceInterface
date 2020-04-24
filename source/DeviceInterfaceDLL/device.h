@@ -46,6 +46,8 @@ typedef struct DeviceItem
 	SOCKET Sock;//与设备连接的tcp socket
 	UINT32 nPeerIp;//设备ip地址
 	UINT32 nPeerPort;//设备端口
+	UINT32 uTimeOut;//离线超时时间，单位秒，0表示不使用超时。如果超时发送，会触发回调函数。//0.2.1
+	UINT32 uTickTimestamp;//上次收到设备数据的时间戳。//v0.2.1
 	
 	HANDLE hEvent;//事件	//应用使用CreateEvent创建一个事件句柄，并传入，当收到Command命令回应时，将Event设置为有效。
 	CHAR sCommand[128];//监听事件
@@ -59,10 +61,14 @@ typedef struct DeviceItem
 }SR_DEVICE_ITEM, *LPSR_DEVICE_ITEM;
 
 LPSR_DEVICE_ITEM DeviceAdd(LPSR_USER_LOGIN_INFO LogInfo, LPSR_DEVICEINFO DevInfo);
-LPSR_DEVICE_ITEM DeviceFindByAddr(char* addr);
-LPSR_DEVICE_ITEM DeviceFind(UINT32 lUserID);
+//LPSR_DEVICE_ITEM DeviceFindByAddr(char* addr);
+//LPSR_DEVICE_ITEM DeviceFind(UINT32 lUserID);
 VOID DeviceLock(LPSR_DEVICE_ITEM d);
 VOID DeviceUnLock(LPSR_DEVICE_ITEM d);
+
+LPSR_DEVICE_ITEM DeviceGetByAddr(char* addr);
+LPSR_DEVICE_ITEM DeviceGet(UINT32 lUserID);
+VOID DeviceRelease(LPSR_DEVICE_ITEM d);
 VOID CommandProcess(LPSR_DEVICE_ITEM d);
 VOID DeviceSetProbe(LPSR_DEVICE_ITEM d, HANDLE hEvent, CHAR* sCmd, CHAR* psBuffer, UINT32 nBufferSize);
 VOID DeviceReleaseProbe(LPSR_DEVICE_ITEM d);
@@ -70,26 +76,26 @@ VOID DeviceReleaseProbe(LPSR_DEVICE_ITEM d);
 void DeviceRemoveAll();
 INT DeviceRemove(UINT32 nUserID);
 
-INT DeviceGetDiskInfo(LPSR_DEVICE_ITEM d, UINT32* totalCapacity, UINT32* remainCapacity);
-INT DeviceGetFirstFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize);
-INT DeviceGetNextFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize);
-INT DevicePlayFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName, INT nVolume);
+INT DeviceGetDiskInfo(UINT32 lUserID, UINT32* totalCapacity, UINT32* remainCapacity);
+INT DeviceGetFirstFile(UINT32 lUserID, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize);
+INT DeviceGetNextFile(UINT32 lUserID, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize);
+INT DevicePlayFileStart(UINT32 lUserID, UINT32 nDataPort, CHAR* sFileName, INT nVolume);
 
-INT DeviceDeleteFile(LPSR_DEVICE_ITEM d, CHAR* sFileName);
-INT DeviceSDCardPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sFileName, INT nVolume);
-INT DeviceSDCardPlayFileGetStatus(LPSR_DEVICE_ITEM d, INT* runtime, INT* process);
-INT DeviceSDCardPlayFileStop(LPSR_DEVICE_ITEM d);
+INT DeviceDeleteFile(UINT32 lUserID, CHAR* sFileName);
+INT DeviceSDCardPlayFileStart(UINT32 lUserID, CHAR* sFileName, INT nVolume);
+INT DeviceSDCardPlayFileGetStatus(UINT32 lUserID, INT* runtime, INT* process);
+INT DeviceSDCardPlayFileStop(UINT32 lUserID);
 
-INT DeviceUploadFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, PCHAR sFileName, BOOL bConver);
+INT DeviceUploadFileStart(UINT32 lUserID, UINT32 nDataPort, CHAR* sFileName, BOOL bConver);
 
-INT DeviceIntercomStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nInputGain, CHAR* sInputSource, INT nVolume, CHAR* sAecMode, CHAR* sSession);
-INT DeviceIntercomStop(LPSR_DEVICE_ITEM d);
+INT DeviceIntercomStart(UINT32 lUserID, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nInputGain, CHAR* sInputSource, INT nVolume, CHAR* sAecMode, CHAR* sSession);
+INT DeviceIntercomStop(UINT32 lUserID);
 
-INT DeviceEmergencyPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sFileName);
-INT DeviceEmergencyPlayFileStop(LPSR_DEVICE_ITEM d);
+INT DeviceEmergencyPlayFileStart(UINT32 lUserID, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sFileName);
+INT DeviceEmergencyPlayFileStop(UINT32 lUserID);
 
-INT DeviceUpdateStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, INT nMode, CHAR* sFileName);
+INT DeviceUpdateStart(UINT32 lUserID, UINT32 nDataPort, INT nMode, CHAR* sFileName);
 
-INT DeviceSetVolume(LPSR_DEVICE_ITEM d, UINT32 nVolume);
-INT DeviceApply(LPSR_DEVICE_ITEM d);
+INT DeviceSetVolume(UINT32 lUserID, UINT32 nVolume);
+INT DeviceApply(UINT32 lUserID);
 

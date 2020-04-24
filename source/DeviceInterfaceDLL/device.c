@@ -36,6 +36,13 @@ LPSR_DEVICE_ITEM DeviceAdd(LPSR_USER_LOGIN_INFO LogInfo, LPSR_DEVICEINFO DevInfo
 	d->sCommand[0] = 0;
 	d->psCommandBuffer = NULL;
 
+	//v0.2.1
+	d->uTimeOut = LogInfo->uTimeOut;
+	if (d->uTimeOut == 0)d->uTimeOut = 60;
+	if (d->uTimeOut < 10)d->uTimeOut = 10;
+	if (d->uTimeOut > 3600)d->uTimeOut = 3600;
+	d->uTickTimestamp = GetTickCount();
+
 	d->nLoginStats = 0;
 	d->Sock = INVALID_SOCKET;
 	EnterCriticalSection(&gCriticalSection);
@@ -59,7 +66,7 @@ void DeviceFree(LPSR_DEVICE_ITEM d)
 	free(d->Fifo.Buffer);
 	free(d);
 }
-
+/*
 LPSR_DEVICE_ITEM DeviceFindByAddr(char* addr)
 {
 	//LPSR_DEVICE_ITEM d;
@@ -78,7 +85,28 @@ LPSR_DEVICE_ITEM DeviceFindByAddr(char* addr)
 	LeaveCriticalSection(&gCriticalSection);
 	return NULL;
 }
-
+*/
+//当找到设备d后，加锁
+LPSR_DEVICE_ITEM DeviceGetByAddr(char* addr)
+{
+	//LPSR_DEVICE_ITEM d;
+	EnterCriticalSection(&gCriticalSection);
+	List p = gDeviceList;
+	while (p != NULL)
+	{
+		LPSR_DEVICE_ITEM d = p->data;
+		if (strcmp(d->LogInfo.sDeviceAddress, addr) == 0)
+		{
+			DeviceLock(d);//v0.2.1
+			LeaveCriticalSection(&gCriticalSection);
+			return d;
+		}
+		p = p->next;
+	}
+	LeaveCriticalSection(&gCriticalSection);
+	return NULL;
+}
+/*
 LPSR_DEVICE_ITEM DeviceFind(UINT32 lUserID)
 {
 	EnterCriticalSection(&gCriticalSection);
@@ -96,6 +124,34 @@ LPSR_DEVICE_ITEM DeviceFind(UINT32 lUserID)
 	}
 	LeaveCriticalSection(&gCriticalSection);
 	return NULL;
+}
+*/
+//v0.2.1
+//当找到设备d后，加锁
+LPSR_DEVICE_ITEM DeviceGet(UINT32 lUserID)
+{
+	EnterCriticalSection(&gCriticalSection);
+	//LeaveCriticalSection(&gCriticalSection);
+	List p = gDeviceList;
+	while (p != NULL)
+	{
+		LPSR_DEVICE_ITEM d = p->data;
+		if (d->nUserID == lUserID)
+		{
+			DeviceLock(d);
+			LeaveCriticalSection(&gCriticalSection);
+			return d;
+		}
+		p = p->next;
+	}
+	LeaveCriticalSection(&gCriticalSection);
+	return NULL;
+}
+
+//v0.2.1
+VOID DeviceRelease(LPSR_DEVICE_ITEM d)
+{
+	DeviceUnLock(d);
 }
 
 //移除成功返回0，目标不存在返回1
@@ -122,6 +178,7 @@ INT DeviceRemove(UINT32 nUserID)
 
 	if (d_pb->nUserID == nUserID)
 	{
+		DeviceLock(d_pb);//v0.2.1 设备加锁，确保没有其他代码使用设备d，否则释放d将导致其他代码异常。
 		if (pb == gDeviceList)//被删除设备在链表第一位置
 		{
 			gDeviceList = pb->next;
@@ -130,7 +187,9 @@ INT DeviceRemove(UINT32 nUserID)
 		{ 
 			pf->next = pb->next;
 		}
-		DeviceFree(pb->data);
+		if (d_pb->Sock != INVALID_SOCKET)shutdown(d_pb->Sock,2);
+
+		DeviceFree(d_pb);//DeviceFree(pb->data);//0.1.4
 		free(pb);
 		result = 0;
 	}
@@ -160,22 +219,22 @@ void DeviceRemoveAll()
 VOID DeviceSetProbe(LPSR_DEVICE_ITEM d, HANDLE hEvent, CHAR* sCmd, CHAR* psBuffer, UINT32 nBufferSize)
 {
 	if (d->hEvent != NULL)return;
-	DeviceLock(d);
+	//DeviceLock(d);//v0.2.1 设备d加锁是调用者的责任
 	d->hEvent = hEvent;
 	d->psCommandBuffer = psBuffer;
 	d->nCommandBufferSize = nBufferSize;
 	strncpy_s(d->sCommand, sizeof(d->sCommand), sCmd, strlen(sCmd));
-	DeviceUnLock(d);
+	//DeviceUnLock(d);//0.2.1
 }
 
 VOID DeviceReleaseProbe(LPSR_DEVICE_ITEM d)
 {
-	DeviceLock(d);
+	//DeviceLock(d);//v0.2.1 设备d加锁是调用者的责任
 	d->hEvent = NULL;
 	d->psCommandBuffer = NULL;
 	d->nCommandBufferSize = 0;
 	memset(d->sCommand, 0, sizeof(d->sCommand));
-	DeviceUnLock(d);
+	//DeviceUnLock(d);
 }
 
 void DeviceLock(LPSR_DEVICE_ITEM d)
@@ -272,6 +331,10 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 					}
 					else if (strcmp(command->valuestring, "register") == 0)
 					{
+						UINT32 systick = (d->uTimeOut * 2) / 3;
+						systick = min(systick, 3000);
+						systick = max(systick, 5);
+
 						if (d->nLoginStats == 0)//刚连接，这里应该是设备的第一次注册请求
 						{
 							cJSON* authentication = cJSON_GetObjectItem(json, "authentication");
@@ -308,24 +371,24 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 											char* auth = MDString(tmpbuf);
 
 											//d->nLoginStats = 1;
-
+											
 											//jsontext = CommandRegisterAck(session, auth, RESULT_OK);
-											len = CommandRegisterAck(out, sizeof(out), session, auth, RESULT_OK);
+											len = CommandRegisterAck(out, sizeof(out), session, auth, systick, RESULT_OK);
 										}
 										else//仅服务器鉴权
 										{
-											len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_OK);
+											len = CommandRegisterAck(out, sizeof(out), NULL, NULL, systick, RESULT_OK);
 										}
 										d->nLoginStats = 1;
 									}
 									else//鉴权失败，非法设备登录
 									{
-										len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_REGISTER_FAULT);
+										len = CommandRegisterAck(out, sizeof(out), NULL, NULL, 0, RESULT_REGISTER_FAULT);
 									}
 								}
 								else//设备登录数据不包含必须字段。
 								{
-									len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_REGISTER_FAULT);
+									len = CommandRegisterAck(out, sizeof(out), NULL, NULL, 0, RESULT_REGISTER_FAULT);
 								}
 							}
 							else////v0.1.3
@@ -336,22 +399,22 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 								sprintf_s(tmpbuf, sizeof(tmpbuf), "%s@%s", d->LogInfo.sPassword, d->LogInfo.sUserName);
 								char* s = MDString(tmpbuf);
 
-								if (strcmp(s, authentication->valuestring) == 0)
+								if ((authentication != NULL)&&(strcmp(s, authentication->valuestring) == 0))
 								{
 									if ((auth_dir != NULL) && (strcmp(auth_dir->valuestring, "bi-direction") == 0))
 									{
 										char* auth = MDString(d->LogInfo.sPassword);
-										len = CommandRegisterAck(out, sizeof(out), NULL, auth, RESULT_OK);
+										len = CommandRegisterAck(out, sizeof(out), NULL, auth, systick, RESULT_OK);
 									}
 									else//仅服务器鉴权
 									{
-										len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_OK);
+										len = CommandRegisterAck(out, sizeof(out), NULL, NULL, systick, RESULT_OK);
 									}
 									d->nLoginStats = 1;
 								}
 								else//鉴权失败，非法设备登录
 								{
-									len = CommandRegisterAck(out, sizeof(out), NULL, NULL, RESULT_REGISTER_FAULT);
+									len = CommandRegisterAck(out, sizeof(out), NULL, NULL, 0, RESULT_REGISTER_FAULT);
 								}
 							}
 							TcpServerSend(d->Sock, out, len);
@@ -362,6 +425,7 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 							if (result->valueint == RESULT_OK)
 							{
 								d->nLoginStats = 2;
+								d->uTickTimestamp = GetTickCount();//v0.2.1 登录后复位心跳时间戳，用于超时计时。
 								if (gfExceptionCallBack != NULL)
 								{
 									gfExceptionCallBack(MSGTYPE_DEVICE_LOGIN, d->nUserID, 0, &d);
@@ -381,6 +445,16 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 					else
 					{
 					}
+
+					d->uTickTimestamp = GetTickCount();//v0.2.1 每次收到合法的通讯帧，都这个时间戳进行复位。
+					if (d->nLoginStats == 3)//如果之前发生了timeout事件，这里进行回复。
+					{
+						if (gfExceptionCallBack != NULL)
+						{
+							gfExceptionCallBack(MSGTYPE_RECONNECT, d->nUserID, 0, &d);
+						}
+						d->nLoginStats = 2;
+					}
 				}
 				cJSON_Delete(json);
 			}
@@ -389,11 +463,13 @@ void CommandProcess(LPSR_DEVICE_ITEM d)
 }
 
 #define COMMAND_BUFFER_SIZE 1024
-
+/*
 INT SendCommand(LPSR_DEVICE_ITEM d, CHAR* cmd, CHAR* sendbuf, UINT32 slen, CHAR* recvbuf, UINT32 recvbufsize, UINT32* nrecvbyte)
 {
 	HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if (hEvent == NULL)return -1;
+	LPSR_DEVICE_ITEM d1 = DeviceGet(d->nUserID);
+	if (d1 == NULL)return RC_INVALID_USER_HANDLE;
 	DeviceSetProbe(d, hEvent, cmd, recvbuf, recvbufsize);
 	TcpServerSend_Block(d->Sock, sendbuf, slen);
 	int ret = WaitForSingleObject(hEvent, 3000);
@@ -411,19 +487,88 @@ INT SendCommand(LPSR_DEVICE_ITEM d, CHAR* cmd, CHAR* sendbuf, UINT32 slen, CHAR*
 		return -1;
 	}
 }
+*/
+INT SendCommand(UINT32 lUserID, CHAR* cmd, CHAR* sendbuf, UINT32 slen, CHAR* recvbuf, UINT32 recvbufsize, UINT32* nrecvbyte)
+{
+	LPSR_DEVICE_ITEM d;
+	UINT32 nRecvBytes = 0;
+	HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (hEvent == NULL)return -1;
+	d = DeviceGet(lUserID);
+	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	DeviceSetProbe(d, hEvent, cmd, recvbuf, recvbufsize);
+	TcpServerSend_Block(d->Sock, sendbuf, slen);
+	DeviceRelease(d);
+	int ret = WaitForSingleObject(hEvent, 3000);
+	
+	d = DeviceGet(lUserID);
+	if (d != NULL)
+	{
+		nRecvBytes = d->nRecvBytes;
+		DeviceReleaseProbe(d);
+		DeviceRelease(d);
+	}
+	CloseHandle(hEvent);
+
+	if (ret == WAIT_OBJECT_0)
+	{
+		*nrecvbyte = nRecvBytes;
+		return 0;
+	}
+	else
+	{
+		*nrecvbyte = 0;
+		return -1;
+	}
+}
+
+INT SendCommand_WithTimeOut(UINT32 lUserID, CHAR* cmd, CHAR* sendbuf, UINT32 slen, CHAR* recvbuf, UINT32 recvbufsize, UINT32* nrecvbyte, UINT32 uTimeOut)
+{
+	LPSR_DEVICE_ITEM d;
+	UINT32 nRecvBytes = 0;
+	HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (hEvent == NULL)return -1;
+	d = DeviceGet(lUserID);
+	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	DeviceSetProbe(d, hEvent, cmd, recvbuf, recvbufsize);
+	TcpServerSend_Block(d->Sock, sendbuf, slen);
+	DeviceRelease(d);
+	int ret = WaitForSingleObject(hEvent, uTimeOut);
+
+	d = DeviceGet(lUserID);
+	if (d != NULL)
+	{
+		nRecvBytes = d->nRecvBytes;
+		DeviceReleaseProbe(d);
+		DeviceRelease(d);
+	}
+	CloseHandle(hEvent);
+
+	if (ret == WAIT_OBJECT_0)
+	{
+		*nrecvbyte = nRecvBytes;
+		return 0;
+	}
+	else
+	{
+		*nrecvbyte = 0;
+		return -1;
+	}
+}
 
 //返回sd卡的总容量和剩余容量
-int DeviceGetDiskInfo(LPSR_DEVICE_ITEM d, UINT32* totalCapacity, UINT32* remainCapacity)
+int DeviceGetDiskInfo(UINT32 lUserID, UINT32* totalCapacity, UINT32* remainCapacity)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
 
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandSDCardGetInfo(sendbuf, COMMAND_BUFFER_SIZE);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_GET_DISK_INFO, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	//int ret = SendCommand(lUserID, CMD_GET_DISK_INFO, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand_WithTimeOut(lUserID, CMD_GET_DISK_INFO, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes, 8000);
 	if (ret == 0)
 	{
 		cJSON* json = cJSON_Parse(recvbuf);
@@ -459,16 +604,16 @@ int DeviceGetDiskInfo(LPSR_DEVICE_ITEM d, UINT32* totalCapacity, UINT32* remainC
 	return RC_TIMEOUT;
 }
 
-INT DeviceGetFirstFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize)
+INT DeviceGetFirstFile(UINT32 lUserID, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandSDCardGetFirstFile(sendbuf, COMMAND_BUFFER_SIZE);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_GET_FIRST_FILE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE,&nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_GET_FIRST_FILE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE,&nRecvBytes);
 	
 	if(ret == 0)
 	{
@@ -497,16 +642,16 @@ INT DeviceGetFirstFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize
 	return RC_TIMEOUT;
 }
 
-INT DeviceGetNextFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize)
+INT DeviceGetNextFile(UINT32 lUserID, CHAR* sFileName, UINT32 nFileNameSize, UINT32* nFileSize)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandSDCardGetNextFile(sendbuf, COMMAND_BUFFER_SIZE);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_GET_NEXT_FILE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_GET_NEXT_FILE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -536,16 +681,16 @@ INT DeviceGetNextFile(LPSR_DEVICE_ITEM d, CHAR* sFileName, UINT32 nFileNameSize,
 }
 
 //CommandSDCardDeleteFile
-INT DeviceDeleteFile(LPSR_DEVICE_ITEM d, CHAR* sFileName)
+INT DeviceDeleteFile(UINT32 lUserID, CHAR* sFileName)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandSDCardDeleteFile(sendbuf, COMMAND_BUFFER_SIZE, sFileName);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_DELETE_FILE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_DELETE_FILE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -579,16 +724,16 @@ INT DeviceDeleteFile(LPSR_DEVICE_ITEM d, CHAR* sFileName)
 	return RC_TIMEOUT;
 }
 
-INT DeviceUploadFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName, BOOL bConver)
+INT DeviceUploadFileStart(UINT32 lUserID, UINT32 nDataPort, CHAR* sFileName, BOOL bConver)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandSDCardUploadFile(sendbuf, COMMAND_BUFFER_SIZE, nDataPort, sFileName, bConver);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_UPLOAD_FILE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_UPLOAD_FILE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -622,16 +767,16 @@ INT DeviceUploadFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName,
 	return RC_TIMEOUT;
 }
 
-INT DeviceUpdateStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, INT nMode, CHAR* sFileName)
+INT DeviceUpdateStart(UINT32 lUserID, UINT32 nDataPort, INT nMode, CHAR* sFileName)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandUpdate(sendbuf, COMMAND_BUFFER_SIZE, nDataPort, nMode, sFileName);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_UPDATE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_UPDATE, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -665,16 +810,16 @@ INT DeviceUpdateStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, INT nMode, CHAR* sFi
 	return RC_TIMEOUT;
 }
 
-INT DeviceApply(LPSR_DEVICE_ITEM d)
+INT DeviceApply(UINT32 lUserID)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandApply(sendbuf, COMMAND_BUFFER_SIZE);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_APPLY, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID , CMD_APPLY, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -712,16 +857,17 @@ INT DeviceApply(LPSR_DEVICE_ITEM d)
 
 //当前函数仅支持mp3文件的播放
 //sFileName仅作为播放信息使用，函数并不操作该文件。
-INT DevicePlayFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName, INT nVolume)
+//INT DevicePlayFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName, INT nVolume)
+INT DevicePlayFileStart(UINT32 lUserID, UINT32 nDataPort, CHAR* sFileName, INT nVolume)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandPlayFileStart(sendbuf, COMMAND_BUFFER_SIZE, nDataPort, sFileName, nVolume);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_START, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_START, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -756,16 +902,16 @@ INT DevicePlayFileStart(LPSR_DEVICE_ITEM d, UINT32 nDataPort, CHAR* sFileName, I
 	//
 }
 
-INT DevicePlayFileStop(LPSR_DEVICE_ITEM d)
+INT DevicePlayFileStop(UINT32 lUserID)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandPlayFileStop(sendbuf, COMMAND_BUFFER_SIZE);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_STOP, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_STOP, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -801,7 +947,7 @@ INT DevicePlayFileStop(LPSR_DEVICE_ITEM d)
 	//
 }
 
-INT DeviceEmergencyPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sFileName)
+INT DeviceEmergencyPlayFileStart(UINT32 lUserID, CHAR* sTargetAddr, UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nVolume, CHAR* sFileName)
 {
 	PCHAR sIp = NULL;
 	if (sTargetAddr == NULL)sIp = "0.0.0.0";
@@ -810,11 +956,11 @@ INT DeviceEmergencyPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr, UINT32 n
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandPlayFileEmergencyStart(sendbuf, COMMAND_BUFFER_SIZE, sIp, nTargetPort, sStreamType, sProtocol, nVolume, sFileName);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_EMERGENCY_START, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_EMERGENCY_START, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -847,16 +993,16 @@ INT DeviceEmergencyPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr, UINT32 n
 	}
 	return RC_TIMEOUT;
 }
-INT DeviceEmergencyPlayFileStop(LPSR_DEVICE_ITEM d)
+INT DeviceEmergencyPlayFileStop(UINT32 lUserID)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandPlayFileEmergencyStop(sendbuf, COMMAND_BUFFER_SIZE);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_EMERGENCY_STOP, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID , CMD_EMERGENCY_STOP, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -891,16 +1037,16 @@ INT DeviceEmergencyPlayFileStop(LPSR_DEVICE_ITEM d)
 	//
 }
 
-INT DeviceSDCardPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sFileName, INT nVolume)
+INT DeviceSDCardPlayFileStart(UINT32 lUserID, CHAR* sFileName, INT nVolume)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandSDCardPlayFileStart(sendbuf, COMMAND_BUFFER_SIZE, sFileName, nVolume);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_START, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_START, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -935,21 +1081,21 @@ INT DeviceSDCardPlayFileStart(LPSR_DEVICE_ITEM d, CHAR* sFileName, INT nVolume)
 	//
 }
 
-INT DeviceSDCardPlayFileStop(LPSR_DEVICE_ITEM d)
+INT DeviceSDCardPlayFileStop(UINT32 lUserID)
 {
-	return DevicePlayFileStop(d);
+	return DevicePlayFileStop(lUserID);
 }
 
-INT DeviceSDCardPlayFileGetStatus(LPSR_DEVICE_ITEM d, INT* runtime, INT* process)
+INT DeviceSDCardPlayFileGetStatus(UINT32 lUserID, INT* runtime, INT* process)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandSDCardPlayFileGetStatus(sendbuf, COMMAND_BUFFER_SIZE);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_SDCARD_PLAYFILE_STATUS, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_SDCARD_PLAYFILE_STATUS, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -989,7 +1135,7 @@ INT DeviceSDCardPlayFileGetStatus(LPSR_DEVICE_ITEM d, INT* runtime, INT* process
 	//
 }
 
-INT DeviceIntercomStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr,UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nInputGain, CHAR* sInputSource, INT nVolume, CHAR* sAecMode, CHAR* sSession)
+INT DeviceIntercomStart(UINT32 lUserID, CHAR* sTargetAddr,UINT32 nTargetPort, CHAR* sStreamType, CHAR* sProtocol, INT nInputGain, CHAR* sInputSource, INT nVolume, CHAR* sAecMode, CHAR* sSession)
 {
 	PCHAR sIp = NULL;
 	if(sTargetAddr == NULL)sIp = "0.0.0.0";
@@ -998,11 +1144,11 @@ INT DeviceIntercomStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr,UINT32 nTargetPort
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandIntercomStart(sendbuf, COMMAND_BUFFER_SIZE, sIp, nTargetPort, sStreamType, sProtocol, nInputGain, sInputSource, nVolume, sAecMode, sSession);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_START, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_START, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -1037,21 +1183,21 @@ INT DeviceIntercomStart(LPSR_DEVICE_ITEM d, CHAR* sTargetAddr,UINT32 nTargetPort
 	//INT CommandIntercomStart(PCHAR Out, INT OutSize, PCHAR sTargetAddr, INT nTargetPort, PCHAR sStreamType, PCHAR sProtocol, INT nInputGain, PCHAR sInputSource, INT nVolume, PCHAR sAecMode)
 }
 
-INT DeviceIntercomStop(LPSR_DEVICE_ITEM d)
+INT DeviceIntercomStop(UINT32 lUserID)
 {
-	return DevicePlayFileStop(d);
+	return DevicePlayFileStop(lUserID);
 }
 
-INT DeviceSetVolume(LPSR_DEVICE_ITEM d, UINT32 nVolume)
+INT DeviceSetVolume(UINT32 lUserID, UINT32 nVolume)
 {
 	INT nRecvBytes;
 	CHAR sendbuf[COMMAND_BUFFER_SIZE];
 	CHAR recvbuf[COMMAND_BUFFER_SIZE];
-	if (d == NULL)return RC_INVALID_USER_HANDLE;
+	//if (d == NULL)return RC_INVALID_USER_HANDLE;
 	int len = CommandSetVolume(sendbuf, COMMAND_BUFFER_SIZE, nVolume);
 	if (len == 0)return RC_UNKNOWN;
 
-	int ret = SendCommand(d, CMD_SET, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
+	int ret = SendCommand(lUserID, CMD_SET, sendbuf, len, recvbuf, COMMAND_BUFFER_SIZE, &nRecvBytes);
 
 	if (ret == 0)
 	{
@@ -1083,4 +1229,28 @@ INT DeviceSetVolume(LPSR_DEVICE_ITEM d, UINT32 nVolume)
 		return RC_UNKNOWN;
 	}
 	return RC_TIMEOUT;
+}
+
+//v0.2.1
+//设备定时调用，主要用于发生连接超时事件时，调用回调
+VOID DeviceTick(void)
+{
+	EnterCriticalSection(&gCriticalSection);//进入全局临界区
+	List p = gDeviceList;
+	LPSR_DEVICE_ITEM d;
+	while (p != NULL)
+	{
+		//List p1 = p->next;
+		d = p->data;
+		if ((d->nLoginStats == 2)&&(d->uTimeOut > 0) && ((GetTickCount() - d->uTickTimestamp) > 1000 * d->uTimeOut))
+		{
+			d->nLoginStats = 3;
+			if (gfExceptionCallBack != NULL)
+			{
+				gfExceptionCallBack(MSGTYPE_TIMEOUT, d->nUserID, 0, &d);
+			}
+		}
+		p = p->next;
+	}
+	LeaveCriticalSection(&gCriticalSection);//离开临界区
 }

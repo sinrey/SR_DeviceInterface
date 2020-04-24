@@ -38,7 +38,7 @@
 #define INPUTSOURCE_MIC "mic"
 
 INT CommandSDCardGetInfo(CHAR* Out, INT OutSize);
-INT CommandRegisterAck(CHAR* Out, INT OutSize, CHAR* session, CHAR* auth, INT err);
+INT CommandRegisterAck(CHAR* Out, INT OutSize, CHAR* session, CHAR* auth, INT systick, INT err);
 INT CommandSDCardGetFirstFile(CHAR* Out, INT OutSize);
 INT CommandSDCardGetNextFile(CHAR* Out, INT OutSize);
 INT CommandSDCardUploadFile(CHAR* Out, INT OutSize, INT DatPort, CHAR* sFileName, BOOL bCover);

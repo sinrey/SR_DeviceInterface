@@ -8,7 +8,8 @@ typedef struct
 	WORD 	wPort; 	// 端口
 	char 	sUserName[64];
 	char 	sPassword[64];
-	BYTE 	byRes2[128];
+	INT32   uTimeOut;//定义一个超时时间，当超过这个时间没有收到设备的状态帧，认为设备离线。单位秒//v0.2.1
+	BYTE 	byRes2[124];
 }SR_USER_LOGIN_INFO, *LPSR_USER_LOGIN_INFO;
 
 typedef struct
@@ -21,11 +22,13 @@ typedef struct
 
 enum MSG_TYPE
 {
-	MSGTYPE_NONE = 0,
-	MSGTYPE_CONNECTED,
-	MSGTYPE_DISCONNECTED,
-	MSGTYPE_DEVICE_LOGIN,
-	MSGTYPE_DEVICE_LOGOUT,
+	MSGTYPE_NONE = 0, 
+	MSGTYPE_CONNECTED, //设备连接到主机（未注册）
+	MSGTYPE_DISCONNECTED, //设备与主机断开连接
+	MSGTYPE_DEVICE_LOGIN, //设备登录到主机（验证了用户名和密码）
+	MSGTYPE_DEVICE_LOGOUT,//设备登出（暂未使用）
+	MSGTYPE_TIMEOUT,	//登录成功后，设备与主机之间的心跳超时。V0.2.1 
+	MSGTYPE_RECONNECT,	//心跳超时后，主机再次获得设备消息。V0.2.1
 };
 
 enum RESULT_CODE

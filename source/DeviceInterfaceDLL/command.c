@@ -268,7 +268,7 @@ INT CommandApply(CHAR* Out, INT OutSize)
 	return jsonlength;
 }
 
-INT CommandRegisterAck(CHAR* Out, INT OutSize, CHAR* session, CHAR* auth, INT err)
+INT CommandRegisterAck(CHAR* Out, INT OutSize, CHAR* session, CHAR* auth, INT systick, INT err)
 //char* CommandRegisterAck(char* session, char* auth, int err)
 {
 	cJSON * jsonroot = NULL;
@@ -277,6 +277,7 @@ INT CommandRegisterAck(CHAR* Out, INT OutSize, CHAR* session, CHAR* auth, INT er
 	cJSON_AddStringToObject(jsonroot, "command", CMD_REGISTER);
 	if (session != NULL)cJSON_AddStringToObject(jsonroot, "session", session);
 	if (auth != NULL)cJSON_AddStringToObject(jsonroot, "authentication", auth);
+	cJSON_AddNumberToObject(jsonroot, "systick", systick);//v0.2.1
 	cJSON_AddNumberToObject(jsonroot, "result", err);
 
 	jsonout = cJSON_Print(jsonroot);
